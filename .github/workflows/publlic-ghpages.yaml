@@ -15,6 +15,7 @@ jobs:
         uses: asyncapi/cli@v3.5.2
         with:
           filepath: lobby-to-client/v1/asyncapi.yml
+          template: '@asyncapi/html-template@v3.3.1'
 
       - name: Deploy GH page
         uses: JamesIves/github-pages-deploy-action@v4
