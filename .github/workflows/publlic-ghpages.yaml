@@ -17,7 +17,7 @@ jobs:
           filepath: lobby-to-client/v1/asyncapi.html
 
       - name: Deploy GH page
-        uses: JamesIves/github-pages-deploy-action
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
           ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH: gh-pages
