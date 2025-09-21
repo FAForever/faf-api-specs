@@ -12,7 +12,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Generating HTML from my AsyncAPI document
-        uses: asyncapi/cli@v2
+        uses: asyncapi/cli@v2.16.0
         with:
           filepath: lobby-to-client/v1/asyncapi.html
 
