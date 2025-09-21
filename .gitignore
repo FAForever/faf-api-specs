@@ -1,2 +1,8 @@
+# IntelliJ
 .idea/
 *.iml
+
+# Files from generator
+output/
+node_modules/
+package*.json
