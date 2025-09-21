@@ -11,16 +11,26 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v5
 
-      - name: Generating HTML from my AsyncAPI document
-        uses: asyncapi/cli@v3.5.2
-        with:
-          command: generate
-          filepath: ./lobby-to-client/v1/asyncapi.yml
-          template: "@asyncapi/html-template@3.3.1"
-          output: ./output
-          parameters: >
-            --param outFilename=index.html --param singleFile=true --use-new-generator
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm install -g @asyncapi/cli
+
+      - name: Generate HTML docs from AsyncAPI spec
+        run: >
+          npx asyncapi generate 
+            fromTemplate ./lobby-to-client/v1/asyncapi.yml
+            @asyncapi/html-template@3.3.1 
+            -o ./output
+            --param outFilename=index.html
+            --param singleFile=true
+            --use-new-generator
 
       - name: Deploy GH page
         uses: JamesIves/github-pages-deploy-action@v4
