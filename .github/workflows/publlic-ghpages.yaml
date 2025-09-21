@@ -14,15 +14,13 @@ jobs:
       - name: Generating HTML from my AsyncAPI document
         uses: asyncapi/cli@v3.5.2
         with:
-          command: custom
-          # full command string passed to `asyncapi <custom_command>`
-          custom_command: >
-            generate fromTemplate ./lobby-to-client/v1/asyncapi.yml
-            "@asyncapi/html-template@3.3.1"
-            --use-new-generator
-            -o ./output
-            --param outFilename=index.html
-            --param singleFile=true
+          command: generate
+          filepath: ./lobby-to-client/v1/asyncapi.yml
+          template: "@asyncapi/html-template@3.3.1"
+          output: ./output
+          parameters: >
+            --param outFilename=index.html --param singleFile=true --use-new-generator
+
 
       - name: Deploy GH page
         uses: JamesIves/github-pages-deploy-action@v4
