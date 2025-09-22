@@ -20,19 +20,68 @@ servers:
   local:
     host: localhost
     pathname: /
-    protocol: wss
+    protocol: ws
 channels:
   server-inbound:
     title: server to client communication
     messages:
       JoinGameRequest:
         $ref: '#/components/messages/JoinGameRequest'
+      HostGameRequest:
+        $ref: '#/components/messages/HostGameRequest'
+      SessionRequest:
+        $ref: '#/components/messages/SessionRequest'
+      SocialAddRequest:
+        $ref: '#/components/messages/SocialAddRequest'
+      SocialRemoveRequest:
+        $ref: '#/components/messages/SocialRemoveRequest'
+      AvatarRequest:
+        $ref: '#/components/messages/AvatarRequest'
+      RestoreGameSessionRequest:
+        $ref: '#/components/messages/RestoreGameSessionRequest'
+      PingMessage:
+        $ref: '#/components/messages/PingMessage'
+      PongMessage:
+        $ref: '#/components/messages/PongMessage'
+      AdminRequest:
+        $ref: '#/components/messages/AdminRequest'
+      InviteToPartyRequest:
+        $ref: '#/components/messages/InviteToPartyRequest'
+      AcceptInviteToPartyRequest:
+        $ref: '#/components/messages/AcceptInviteToPartyRequest'
+      KickPlayerFromPartyRequest:
+        $ref: '#/components/messages/KickPlayerFromPartyRequest'
+      LeavePartyRequest:
+        $ref: '#/components/messages/LeavePartyRequest'
+      UnreadyPartyRequest:
+        $ref: '#/components/messages/UnreadyPartyRequest'
+      SelectPartyFactionsRequest:
+        $ref: '#/components/messages/SelectPartyFactionsRequest'
+      GameMatchmakingRequest:
+        $ref: '#/components/messages/GameMatchmakingRequest'
+      SetPlayerVetoesRequest:
+        $ref: '#/components/messages/SetPlayerVetoesRequest'
+      MatchmakerInfoRequest:
+        $ref: '#/components/messages/MatchmakerInfoRequest'
+      AuthenticateRequest:
+        $ref: '#/components/messages/AuthenticateRequest'
+      IsReadyResponse:
+        $ref: '#/components/messages/IsReadyResponse'
   client-inbound:
     title: client to server communication
     messages:
       JoinGameRequest:
         $ref: '#/components/messages/JoinGameRequest'
 operations:
+  serverHostGame:
+    action: receive
+    description: "Server receives clients request to host a game"
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/HostGameRequest'
+    tags:
+      - name: server
   serverJoinGame:
     action: receive
     description: "Server receives clients request to join a game"
@@ -42,6 +91,179 @@ operations:
       - $ref: '#/channels/server-inbound/messages/JoinGameRequest'
     tags:
       - name: server
+  serverRequestSession:
+    action: receive
+    description: "Server receives clients request to get a session"
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/SessionRequest'
+    tags:
+      - name: server
+  serverAddSocial:
+    action: receive
+    description: "Server receives clients request to add a friend/foe"
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/SocialAddRequest'
+    tags:
+      - name: server
+  serverRemoveSocial:
+    action: receive
+    description: "Server receives clients request to remove a friend/foe"
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/SocialRemoveRequest'
+    tags:
+      - name: server
+  serverAvatarRequest:
+    action: receive
+    description: "Server receives avatar request"
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/AvatarRequest'
+    tags:
+      - name: server
+  serverRestoreGameSession:
+    action: receive
+    description: "Server receives request to restore game session for a game"
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/RestoreGameSessionRequest'
+    tags:
+      - name: server
+  serverPing:
+    action: receive
+    description: "Ping received"
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/PingMessage'
+    tags:
+      - name: server
+  serverPong:
+    action: receive
+    description: "Pong received"
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/PongMessage'
+    tags:
+      - name: server
+  serverAdminAction:
+    action: receive
+    description: "Server receives admin action"
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/AdminRequest'
+    tags:
+      - name: server
+  serverInviteToParty:
+    action: receive
+    description: "Server receives invite to party request"
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/InviteToPartyRequest'
+    tags:
+      - name: server
+  serverAcceptInviteToParty:
+    action: receive
+    description: "Server receives accept to party request"
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/AcceptInviteToPartyRequest'
+    tags:
+      - name: server
+  serverKickPlayerFromParty:
+    action: receive
+    description: "Server receives kick from party request"
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/KickPlayerFromPartyRequest'
+    tags:
+      - name: server
+  serverLeaveParty:
+    action: receive
+    description: "Server leave party request"
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/LeavePartyRequest'
+    tags:
+      - name: server
+  serverUnreadyParty:
+    action: receive
+    description: "Server unready party request"
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/UnreadyPartyRequest'
+    tags:
+      - name: server
+  serverSelectPartyFactions:
+    action: receive
+    description: "Server request to select party factions"
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/SelectPartyFactionsRequest'
+    tags:
+      - name: server
+  serverSetMatchmakingStatus:
+    action: receive
+    description: "Server request to join or leave matchmaking queue"
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/GameMatchmakingRequest'
+    tags:
+      - name: server
+  serverSetPlayerVetoes:
+    action: receive
+    description: "Server request to set player vetoes"
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/SetPlayerVetoesRequest'
+    tags:
+      - name: server
+  serverGetMatchmakerInfo:
+    action: receive
+    description: "Server request to receive latest matchmaker info"
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/MatchmakerInfoRequest'
+    tags:
+      - name: server
+  serverAuthenticate:
+    action: receive
+    description: "Server request to authenticate"
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/AuthenticateRequest'
+    tags:
+      - name: server
+  serverGetIsReady:
+    action: receive
+    description: "Server request response to is_ready request"
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/IsReadyResponse'
+    tags:
+      - name: server
+
+  # Client side
   clientJoinGame:
     action: send
     description: "Client requests to join a game"
@@ -53,6 +275,44 @@ operations:
       - name: client
 components:
   messages:
+    HostGameRequest:
+      name: game_host
+      title: "Request to host a game"
+      payload:
+        type: object
+        required:
+          - command
+          - mapname
+          - title
+          - mod
+          - access
+          - version
+        properties:
+          command:
+            type: string
+            const: game_host
+          mapname:
+            type: string
+          title:
+            type: string
+          mod:
+            type: string
+          options:
+            type: string
+            format: binary
+          access:
+            type: string
+            enum:
+              - public
+              - password
+          version:
+            type: integer
+          rating_min:
+            type: integer
+          rating_max:
+            type: integer
+          enforce_rating_range:
+            type: boolean
     JoinGameRequest:
       name: game_join
       title: "Request to join a game"
@@ -69,4 +329,325 @@ components:
             type: integer
             minimum: 1
           password:
+            type: string
+    SessionRequest:
+      name: ask_session
+      title: "Request to get a session"
+      payload:
+        type: object
+        required:
+          - command
+          - version
+          - user_agent
+        properties:
+          command:
+            type: string
+            const: ask_session
+          version:
+            type: string
+          user_agent:
+            type: string
+    SocialAddRequest:
+      name: social_add
+      title: "Request to add a friend/foe"
+      payload:
+        type: object
+        required:
+          - command
+          - friend
+          - foe
+        properties:
+          command:
+            type: string
+            const: social_add
+          friend:
+            type: integer
+            minimum: 1
+            description: UserId of the player to add as friend
+          foe:
+            type: integer
+            minimum: 1
+            description: UserId of the player to add as foe
+    SocialRemoveRequest:
+      name: social_remove
+      title: "Request to remove a friend/foe"
+      payload:
+        type: object
+        required:
+          - command
+          - friend
+          - foe
+        properties:
+          command:
+            type: string
+            const: social_remove
+          friend:
+            type: integer
+            minimum: 1
+            description: UserId of the player to remove as friend
+          foe:
+            type: integer
+            minimum: 1
+            description: UserId of the player to remove as foe
+    AvatarRequest:
+      name: avatar
+      title: "Request to list all avatars or select one"
+      payload:
+        type: object
+        required:
+          - command
+          - action
+          - foe
+        properties:
+          command:
+            type: string
+            const: avatar
+          action:
+            type: string
+            enum:
+              - list_avatar
+              - select
+          avatar:
+            type: string
+            description: avatar to select (only if action is select)
+    RestoreGameSessionRequest:
+      name: restore_game_session
+      title: "Request to restore game session for a game"
+      payload:
+        type: object
+        required:
+          - command
+          - game_id
+        properties:
+          command:
+            type: string
+            const: restore_game_session
+          game_id:
+            type: integer
+            minimum: 1
+    PingMessage:
+      name: ping
+      title: "Ping"
+      payload:
+        type: object
+        required:
+          - command
+        properties:
+          command:
+            type: string
+            const: ping
+    PongMessage:
+      name: ping
+      title: "Pong"
+      payload:
+        type: object
+        required:
+          - command
+        properties:
+          command:
+            type: string
+            const: pong
+    AdminRequest:
+      name: admin
+      title: "Admin commands"
+      payload:
+        type: object
+        required:
+          - command
+          - action
+        properties:
+          command:
+            type: string
+            const: admin
+          action:
+            type: string
+            enum:
+              - closelobby
+              - closeFA
+              - broadcast
+          user_id:
+            type: integer
+            minimum: 1
+            description: UserId of the player hosting a game or lobby to close
+          message:
+            type: string
+            description: Message to broadcast (only if action is broadcast)
+    InviteToPartyRequest:
+      name: invite_to_party
+      title: "Request to invite a player to a party"
+      payload:
+        type: object
+        required:
+          - command
+          - recipient_id
+        properties:
+          command:
+            type: string
+            const: invite_to_party
+          recipient_id:
+            type: integer
+            minimum: 1
+    AcceptInviteToPartyRequest:
+      name: accept_party_invite
+      title: "Request to accept invite to a party"
+      payload:
+        type: object
+        required:
+          - command
+          - sender_id
+        properties:
+          command:
+            type: string
+            const: accept_party_invite
+          sender_id:
+            type: integer
+            minimum: 1
+    KickPlayerFromPartyRequest:
+      name: kick_player_from_party
+      title: "Request to kick a player from a party"
+      payload:
+        type: object
+        required:
+          - command
+          - kicked_player_id
+        properties:
+          command:
+            type: string
+            const: kick_player_from_party
+          kicked_player_id:
+            type: integer
+            minimum: 1
+    LeavePartyRequest:
+      name: leave_party
+      title: "Request to leave a party"
+      payload:
+        type: object
+        required:
+          - command
+        properties:
+          command:
+            type: string
+            const: leave_party
+    UnreadyPartyRequest:
+      name: unready_party
+      title: "Request to unready a party"
+      payload:
+        type: object
+        required:
+          - command
+        properties:
+          command:
+            type: string
+            const: unready_party
+    SelectPartyFactionsRequest:
+      name: set_party_factions
+      title: "Request to set party factions"
+      payload:
+        type: object
+        required:
+          - command
+          - factions
+        properties:
+          command:
+            type: string
+            const: set_party_factions
+          factions:
+            type: array
+            items:
+              type: string
+              enum:
+                - uef
+                - aeon
+                - cybran
+                - seraphim
+    GameMatchmakingRequest:
+      name: game_matchmaking
+      title: "Request to join or leave matchmaking queue"
+      payload:
+        type: object
+        required:
+          - command
+          - queue_name
+          - state
+        properties:
+          command:
+            type: string
+            const: game_matchmaking
+          queue_name:
+            type: string
+          state:
+            type: string
+            enum:
+              - start
+              - stop
+    SetPlayerVetoesRequest:
+      name: set_player_vetoes
+      title: "Request to set player vetoes"
+      payload:
+        type: object
+        required:
+          - command
+          - vetoes
+        properties:
+          command:
+            type: string
+            const: set_player_vetoes
+          vetoes:
+            type: array
+            items:
+              type: object
+              required:
+                - map_pool_map_version_id
+                - veto_tokens_applied
+              properties:
+                map_pool_map_version_id:
+                  type: integer
+                  minimum: 1
+                veto_tokens_applied:
+                  type: integer
+                  minimum: 0
+    MatchmakerInfoRequest:
+      name: matchmaker_info
+      title: Request to receive latest matchmaker info
+      payload:
+        type: object
+        required:
+          - command
+        properties:
+          command:
+            type: string
+            const: matchmaker_info
+    AuthenticateRequest:
+      name: auth
+      title: "Request to authenticate"
+      payload:
+        type: object
+        required:
+          - command
+          - token
+          - session
+          - unique_id
+        properties:
+          command:
+            type: string
+            const: auth
+          token:
+            type: string
+          session:
+            type: integer
+          unique_id:
+            type: string
+    IsReadyResponse:
+      name: is_ready_response
+      title: Response to is_ready request
+      payload:
+        type: object
+        required:
+          - command
+          - request_id
+        properties:
+          command:
+            type: string
+            const: is_ready_response
+          request_id:
             type: string
