@@ -19,17 +19,16 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm install -g @asyncapi/cli
+          npm install -g @asyncapi/cli@6.0.0
 
       - name: Generate HTML docs from AsyncAPI spec
         run: |
           npx asyncapi generate \
             fromTemplate ./lobby-to-client/v1/asyncapi.yml \
-            @asyncapi/html-template@3.3.1 \
+            @asyncapi/html-template@3.5.5 \
             -o ./output \
             --param outFilename=index.html \
-            --param singleFile=true \
-            --use-new-generator
+            --param singleFile=true
 
       - name: Deploy GH page
         uses: JamesIves/github-pages-deploy-action@v4
