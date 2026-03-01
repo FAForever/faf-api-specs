@@ -3,7 +3,12 @@ info:
   title: FAForever Lobby Server API
   version: 1.0.0
   description: |-
-    Since AsyncAPI can only model a publish/subscribe model, this spec only covers the server side of the bidirectional lobby connection
+    WebSocket-based bidirectional messaging protocol for the FAForever lobby server.
+    All messages are JSON objects separated by newlines, with a `command` field identifying the message type.
+
+    This spec covers:
+    - **Lobby messages** between the client and the lobby server
+    - **Game messages** between the game client and the server (wrapped in lobby messages with `target: "game"`)
   license:
     name: MIT
     url: https://www.apache.org/licenses/LICENSE-2.0
@@ -23,26 +28,32 @@ servers:
     protocol: ws
 channels:
   server-inbound:
-    title: server to client communication
+    title: Lobby messages sent from client to server
     messages:
-      JoinGameRequest:
-        $ref: '#/components/messages/JoinGameRequest'
-      HostGameRequest:
-        $ref: '#/components/messages/HostGameRequest'
+      AuthenticateRequest:
+        $ref: '#/components/messages/AuthenticateRequest'
       SessionRequest:
         $ref: '#/components/messages/SessionRequest'
+      HostGameRequest:
+        $ref: '#/components/messages/HostGameRequest'
+      JoinGameRequest:
+        $ref: '#/components/messages/JoinGameRequest'
+      RestoreGameSessionRequest:
+        $ref: '#/components/messages/RestoreGameSessionRequest'
+      GameMatchmakingRequest:
+        $ref: '#/components/messages/GameMatchmakingRequest'
+      IsReadyResponse:
+        $ref: '#/components/messages/IsReadyResponse'
+      MatchmakerInfoRequest:
+        $ref: '#/components/messages/MatchmakerInfoRequest'
+      SetPlayerVetoesRequest:
+        $ref: '#/components/messages/SetPlayerVetoesRequest'
       SocialAddRequest:
         $ref: '#/components/messages/SocialAddRequest'
       SocialRemoveRequest:
         $ref: '#/components/messages/SocialRemoveRequest'
       AvatarRequest:
         $ref: '#/components/messages/AvatarRequest'
-      RestoreGameSessionRequest:
-        $ref: '#/components/messages/RestoreGameSessionRequest'
-      PingMessage:
-        $ref: '#/components/messages/PingMessage'
-      PongMessage:
-        $ref: '#/components/messages/PongMessage'
       AdminRequest:
         $ref: '#/components/messages/AdminRequest'
       InviteToPartyRequest:
@@ -57,282 +68,929 @@ channels:
         $ref: '#/components/messages/UnreadyPartyRequest'
       SelectPartyFactionsRequest:
         $ref: '#/components/messages/SelectPartyFactionsRequest'
-      GameMatchmakingRequest:
-        $ref: '#/components/messages/GameMatchmakingRequest'
-      SetPlayerVetoesRequest:
-        $ref: '#/components/messages/SetPlayerVetoesRequest'
-      MatchmakerInfoRequest:
-        $ref: '#/components/messages/MatchmakerInfoRequest'
-      AuthenticateRequest:
-        $ref: '#/components/messages/AuthenticateRequest'
-      IsReadyResponse:
-        $ref: '#/components/messages/IsReadyResponse'
+      CoopListRequest:
+        $ref: '#/components/messages/CoopListRequest'
+      ModVaultRequest:
+        $ref: '#/components/messages/ModVaultRequest'
+      IceServersRequest:
+        $ref: '#/components/messages/IceServersRequest'
+      PingMessage:
+        $ref: '#/components/messages/PingMessage'
+      PongMessage:
+        $ref: '#/components/messages/PongMessage'
   client-inbound:
-    title: client to server communication
+    title: Lobby messages sent from server to client
     messages:
-      JoinGameRequest:
-        $ref: '#/components/messages/JoinGameRequest'
+      WelcomeMessage:
+        $ref: '#/components/messages/WelcomeMessage'
+      SessionMessage:
+        $ref: '#/components/messages/SessionMessage'
+      AuthenticationFailedMessage:
+        $ref: '#/components/messages/AuthenticationFailedMessage'
+      PlayerInfoMessage:
+        $ref: '#/components/messages/PlayerInfoMessage'
+      GameInfoMessage:
+        $ref: '#/components/messages/GameInfoMessage'
+      SocialMessage:
+        $ref: '#/components/messages/SocialMessage'
+      GameLaunchMessage:
+        $ref: '#/components/messages/GameLaunchMessage'
+      GameJoinFailedMessage:
+        $ref: '#/components/messages/GameJoinFailedMessage'
+      MatchmakerInfoMessage:
+        $ref: '#/components/messages/MatchmakerInfoMessage'
+      SearchInfoMessage:
+        $ref: '#/components/messages/SearchInfoMessage'
+      SearchTimeoutMessage:
+        $ref: '#/components/messages/SearchTimeoutMessage'
+      SearchViolationMessage:
+        $ref: '#/components/messages/SearchViolationMessage'
+      MatchFoundMessage:
+        $ref: '#/components/messages/MatchFoundMessage'
+      MatchCancelledMessage:
+        $ref: '#/components/messages/MatchCancelledMessage'
+      UpdatePartyMessage:
+        $ref: '#/components/messages/UpdatePartyMessage'
+      PartyInviteMessage:
+        $ref: '#/components/messages/PartyInviteMessage'
+      KickedFromPartyMessage:
+        $ref: '#/components/messages/KickedFromPartyMessage'
+      VetoesInfoMessage:
+        $ref: '#/components/messages/VetoesInfoMessage'
+      CoopInfoMessage:
+        $ref: '#/components/messages/CoopInfoMessage'
+      AvatarListMessage:
+        $ref: '#/components/messages/AvatarListMessage'
+      ModVaultInfoMessage:
+        $ref: '#/components/messages/ModVaultInfoMessage'
+      UpdatedAchievementsMessage:
+        $ref: '#/components/messages/UpdatedAchievementsMessage'
+      IrcPasswordMessage:
+        $ref: '#/components/messages/IrcPasswordMessage'
+      IceServersMessage:
+        $ref: '#/components/messages/IceServersMessage'
+      NoticeMessage:
+        $ref: '#/components/messages/NoticeMessage'
+      InvalidMessage:
+        $ref: '#/components/messages/InvalidMessage'
+      DisabledMessage:
+        $ref: '#/components/messages/DisabledMessage'
+      ServerPingMessage:
+        $ref: '#/components/messages/PingMessage'
+      ServerPongMessage:
+        $ref: '#/components/messages/PongMessage'
+      IsReadyMessage:
+        $ref: '#/components/messages/IsReadyMessage'
+  game-server-inbound:
+    title: Game messages sent from game client to server (target "game")
+    description: |-
+      These messages are wrapped inside the lobby WebSocket connection with `"target": "game"`.
+      The game command is in the `command` field and arguments in the `args` array.
+    messages:
+      GameStateCommand:
+        $ref: '#/components/messages/GameStateCommand'
+      GameOptionCommand:
+        $ref: '#/components/messages/GameOptionCommand'
+      GameModsCommand:
+        $ref: '#/components/messages/GameModsCommand'
+      PlayerOptionCommand:
+        $ref: '#/components/messages/PlayerOptionCommand'
+      AIOptionCommand:
+        $ref: '#/components/messages/AIOptionCommand'
+      ClearSlotCommand:
+        $ref: '#/components/messages/ClearSlotCommand'
+      GameResultCommand:
+        $ref: '#/components/messages/GameResultCommand'
+      OperationCompleteCommand:
+        $ref: '#/components/messages/OperationCompleteCommand'
+      JsonStatsCommand:
+        $ref: '#/components/messages/JsonStatsCommand'
+      EnforceRatingCommand:
+        $ref: '#/components/messages/EnforceRatingCommand'
+      TeamkillReportCommand:
+        $ref: '#/components/messages/TeamkillReportCommand'
+      TeamkillHappenedCommand:
+        $ref: '#/components/messages/TeamkillHappenedCommand'
+      GameIceMsgCommand:
+        $ref: '#/components/messages/GameIceMsgCommand'
+      DesyncCommand:
+        $ref: '#/components/messages/DesyncCommand'
+      LaunchStatusCommand:
+        $ref: '#/components/messages/LaunchStatusCommand'
+      BottleneckCommand:
+        $ref: '#/components/messages/BottleneckCommand'
+      BottleneckClearedCommand:
+        $ref: '#/components/messages/BottleneckClearedCommand'
+      DisconnectedCommand:
+        $ref: '#/components/messages/DisconnectedCommand'
+      ChatCommand:
+        $ref: '#/components/messages/ChatCommand'
+      GameFullCommand:
+        $ref: '#/components/messages/GameFullCommand'
+      GameEndedCommand:
+        $ref: '#/components/messages/GameEndedCommand'
+      RehostCommand:
+        $ref: '#/components/messages/RehostCommand'
+  game-client-inbound:
+    title: Game messages sent from server to game client (target "game")
+    description: |-
+      These messages are sent to the game client with `"target": "game"`.
+      The game command is in the `command` field and arguments in the `args` array.
+    messages:
+      HostGameCommand:
+        $ref: '#/components/messages/HostGameCommand'
+      JoinGameCommand:
+        $ref: '#/components/messages/JoinGameCommand'
+      ConnectToPeerCommand:
+        $ref: '#/components/messages/ConnectToPeerCommand'
+      DisconnectFromPeerCommand:
+        $ref: '#/components/messages/DisconnectFromPeerCommand'
+      ServerIceMsgCommand:
+        $ref: '#/components/messages/ServerIceMsgCommand'
+
 operations:
-  serverHostGame:
-    action: receive
-    description: "Server receives clients request to host a game"
-    channel:
-      $ref: '#/channels/server-inbound'
-    messages:
-      - $ref: '#/channels/server-inbound/messages/HostGameRequest'
-    tags:
-      - name: server
-  serverJoinGame:
-    action: receive
-    description: "Server receives clients request to join a game"
-    channel:
-      $ref: '#/channels/server-inbound'
-    messages:
-      - $ref: '#/channels/server-inbound/messages/JoinGameRequest'
-    tags:
-      - name: server
-  serverRequestSession:
-    action: receive
-    description: "Server receives clients request to get a session"
-    channel:
-      $ref: '#/channels/server-inbound'
-    messages:
-      - $ref: '#/channels/server-inbound/messages/SessionRequest'
-    tags:
-      - name: server
-  serverAddSocial:
-    action: receive
-    description: "Server receives clients request to add a friend/foe"
-    channel:
-      $ref: '#/channels/server-inbound'
-    messages:
-      - $ref: '#/channels/server-inbound/messages/SocialAddRequest'
-    tags:
-      - name: server
-  serverRemoveSocial:
-    action: receive
-    description: "Server receives clients request to remove a friend/foe"
-    channel:
-      $ref: '#/channels/server-inbound'
-    messages:
-      - $ref: '#/channels/server-inbound/messages/SocialRemoveRequest'
-    tags:
-      - name: server
-  serverAvatarRequest:
-    action: receive
-    description: "Server receives avatar request"
-    channel:
-      $ref: '#/channels/server-inbound'
-    messages:
-      - $ref: '#/channels/server-inbound/messages/AvatarRequest'
-    tags:
-      - name: server
-  serverRestoreGameSession:
-    action: receive
-    description: "Server receives request to restore game session for a game"
-    channel:
-      $ref: '#/channels/server-inbound'
-    messages:
-      - $ref: '#/channels/server-inbound/messages/RestoreGameSessionRequest'
-    tags:
-      - name: server
-  serverPing:
-    action: receive
-    description: "Ping received"
-    channel:
-      $ref: '#/channels/server-inbound'
-    messages:
-      - $ref: '#/channels/server-inbound/messages/PingMessage'
-    tags:
-      - name: server
-  serverPong:
-    action: receive
-    description: "Pong received"
-    channel:
-      $ref: '#/channels/server-inbound'
-    messages:
-      - $ref: '#/channels/server-inbound/messages/PongMessage'
-    tags:
-      - name: server
-  serverAdminAction:
-    action: receive
-    description: "Server receives admin action"
-    channel:
-      $ref: '#/channels/server-inbound'
-    messages:
-      - $ref: '#/channels/server-inbound/messages/AdminRequest'
-    tags:
-      - name: server
-  serverInviteToParty:
-    action: receive
-    description: "Server receives invite to party request"
-    channel:
-      $ref: '#/channels/server-inbound'
-    messages:
-      - $ref: '#/channels/server-inbound/messages/InviteToPartyRequest'
-    tags:
-      - name: server
-  serverAcceptInviteToParty:
-    action: receive
-    description: "Server receives accept to party request"
-    channel:
-      $ref: '#/channels/server-inbound'
-    messages:
-      - $ref: '#/channels/server-inbound/messages/AcceptInviteToPartyRequest'
-    tags:
-      - name: server
-  serverKickPlayerFromParty:
-    action: receive
-    description: "Server receives kick from party request"
-    channel:
-      $ref: '#/channels/server-inbound'
-    messages:
-      - $ref: '#/channels/server-inbound/messages/KickPlayerFromPartyRequest'
-    tags:
-      - name: server
-  serverLeaveParty:
-    action: receive
-    description: "Server leave party request"
-    channel:
-      $ref: '#/channels/server-inbound'
-    messages:
-      - $ref: '#/channels/server-inbound/messages/LeavePartyRequest'
-    tags:
-      - name: server
-  serverUnreadyParty:
-    action: receive
-    description: "Server unready party request"
-    channel:
-      $ref: '#/channels/server-inbound'
-    messages:
-      - $ref: '#/channels/server-inbound/messages/UnreadyPartyRequest'
-    tags:
-      - name: server
-  serverSelectPartyFactions:
-    action: receive
-    description: "Server request to select party factions"
-    channel:
-      $ref: '#/channels/server-inbound'
-    messages:
-      - $ref: '#/channels/server-inbound/messages/SelectPartyFactionsRequest'
-    tags:
-      - name: server
-  serverSetMatchmakingStatus:
-    action: receive
-    description: "Server request to join or leave matchmaking queue"
-    channel:
-      $ref: '#/channels/server-inbound'
-    messages:
-      - $ref: '#/channels/server-inbound/messages/GameMatchmakingRequest'
-    tags:
-      - name: server
-  serverSetPlayerVetoes:
-    action: receive
-    description: "Server request to set player vetoes"
-    channel:
-      $ref: '#/channels/server-inbound'
-    messages:
-      - $ref: '#/channels/server-inbound/messages/SetPlayerVetoesRequest'
-    tags:
-      - name: server
-  serverGetMatchmakerInfo:
-    action: receive
-    description: "Server request to receive latest matchmaker info"
-    channel:
-      $ref: '#/channels/server-inbound'
-    messages:
-      - $ref: '#/channels/server-inbound/messages/MatchmakerInfoRequest'
-    tags:
-      - name: server
+  # =====================
+  # Server receive (client -> server lobby messages)
+  # =====================
   serverAuthenticate:
     action: receive
-    description: "Server request to authenticate"
+    description: Server receives authentication request with OAuth token
     channel:
       $ref: '#/channels/server-inbound'
     messages:
       - $ref: '#/channels/server-inbound/messages/AuthenticateRequest'
     tags:
-      - name: server
+      - name: auth
+  serverRequestSession:
+    action: receive
+    description: Server receives request for a session ID
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/SessionRequest'
+    tags:
+      - name: auth
+  serverHostGame:
+    action: receive
+    description: Server receives request to host a game
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/HostGameRequest'
+    tags:
+      - name: game
+  serverJoinGame:
+    action: receive
+    description: Server receives request to join a game
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/JoinGameRequest'
+    tags:
+      - name: game
+  serverRestoreGameSession:
+    action: receive
+    description: Server receives request to restore a game session
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/RestoreGameSessionRequest'
+    tags:
+      - name: game
+  serverSetMatchmakingStatus:
+    action: receive
+    description: Server receives request to join or leave a matchmaking queue
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/GameMatchmakingRequest'
+    tags:
+      - name: matchmaker
   serverGetIsReady:
     action: receive
-    description: "Server request response to is_ready request"
+    description: Server receives response to match readiness check
     channel:
       $ref: '#/channels/server-inbound'
     messages:
       - $ref: '#/channels/server-inbound/messages/IsReadyResponse'
     tags:
-      - name: server
+      - name: matchmaker
+  serverGetMatchmakerInfo:
+    action: receive
+    description: Server receives request for latest matchmaker queue info
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/MatchmakerInfoRequest'
+    tags:
+      - name: matchmaker
+  serverSetPlayerVetoes:
+    action: receive
+    description: Server receives request to set map vetoes
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/SetPlayerVetoesRequest'
+    tags:
+      - name: matchmaker
+  serverAddSocial:
+    action: receive
+    description: Server receives request to add a friend or foe
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/SocialAddRequest'
+    tags:
+      - name: social
+  serverRemoveSocial:
+    action: receive
+    description: Server receives request to remove a friend or foe
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/SocialRemoveRequest'
+    tags:
+      - name: social
+  serverAvatarRequest:
+    action: receive
+    description: Server receives avatar list or select request
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/AvatarRequest'
+    tags:
+      - name: social
+  serverAdminAction:
+    action: receive
+    description: Server receives admin action (requires appropriate permissions)
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/AdminRequest'
+    tags:
+      - name: admin
+  serverInviteToParty:
+    action: receive
+    description: Server receives request to invite a player to a party
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/InviteToPartyRequest'
+    tags:
+      - name: party
+  serverAcceptInviteToParty:
+    action: receive
+    description: Server receives request to accept a party invite
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/AcceptInviteToPartyRequest'
+    tags:
+      - name: party
+  serverKickPlayerFromParty:
+    action: receive
+    description: Server receives request to kick a player from a party
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/KickPlayerFromPartyRequest'
+    tags:
+      - name: party
+  serverLeaveParty:
+    action: receive
+    description: Server receives request to leave a party
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/LeavePartyRequest'
+    tags:
+      - name: party
+  serverUnreadyParty:
+    action: receive
+    description: Server receives request to unready a party
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/UnreadyPartyRequest'
+    tags:
+      - name: party
+  serverSelectPartyFactions:
+    action: receive
+    description: Server receives request to set party faction preferences
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/SelectPartyFactionsRequest'
+    tags:
+      - name: party
+  serverCoopList:
+    action: receive
+    description: Server receives request for cooperative mission list
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/CoopListRequest'
+    tags:
+      - name: coop
+  serverModVault:
+    action: receive
+    description: Server receives mod vault request (DEPRECATED - use FAF API instead)
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/ModVaultRequest'
+    tags:
+      - name: vault
+  serverIceServers:
+    action: receive
+    description: Server receives ICE servers request (DEPRECATED - handled outside lobby server)
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/IceServersRequest'
+    tags:
+      - name: deprecated
+  serverPing:
+    action: receive
+    description: Ping received from client
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/PingMessage'
+    tags:
+      - name: heartbeat
+  serverPong:
+    action: receive
+    description: Pong received from client
+    channel:
+      $ref: '#/channels/server-inbound'
+    messages:
+      - $ref: '#/channels/server-inbound/messages/PongMessage'
+    tags:
+      - name: heartbeat
 
-  # Client side
-  clientJoinGame:
+  # =====================
+  # Server send (server -> client lobby messages)
+  # =====================
+  clientWelcome:
     action: send
-    description: "Client requests to join a game"
+    description: Server sends welcome message after successful authentication
     channel:
       $ref: '#/channels/client-inbound'
     messages:
-      - $ref: '#/channels/client-inbound/messages/JoinGameRequest'
+      - $ref: '#/channels/client-inbound/messages/WelcomeMessage'
     tags:
-      - name: client
+      - name: auth
+  clientSession:
+    action: send
+    description: Server sends session ID in response to ask_session
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/SessionMessage'
+    tags:
+      - name: auth
+  clientAuthenticationFailed:
+    action: send
+    description: Server sends authentication failure message
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/AuthenticationFailedMessage'
+    tags:
+      - name: auth
+  clientPlayerInfo:
+    action: send
+    description: Server sends player information (on login and broadcast updates)
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/PlayerInfoMessage'
+    tags:
+      - name: player
+  clientGameInfo:
+    action: send
+    description: Server sends game information (on login and broadcast updates)
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/GameInfoMessage'
+    tags:
+      - name: game
+  clientSocial:
+    action: send
+    description: Server sends friend/foe list and channel info after login
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/SocialMessage'
+    tags:
+      - name: social
+  clientGameLaunch:
+    action: send
+    description: Server tells client to launch the game
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/GameLaunchMessage'
+    tags:
+      - name: game
+  clientGameJoinFailed:
+    action: send
+    description: Server notifies client that joining a game failed
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/GameJoinFailedMessage'
+    tags:
+      - name: game
+  clientMatchmakerInfo:
+    action: send
+    description: Server sends matchmaker queue information
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/MatchmakerInfoMessage'
+    tags:
+      - name: matchmaker
+  clientSearchInfo:
+    action: send
+    description: Server sends matchmaking search status update
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/SearchInfoMessage'
+    tags:
+      - name: matchmaker
+  clientSearchTimeout:
+    action: send
+    description: Server sends matchmaking timeout information for violated players
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/SearchTimeoutMessage'
+    tags:
+      - name: matchmaker
+  clientSearchViolation:
+    action: send
+    description: Server sends violation info when a player fails to connect to a match
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/SearchViolationMessage'
+    tags:
+      - name: matchmaker
+  clientMatchFound:
+    action: send
+    description: Server notifies client that a match has been found
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/MatchFoundMessage'
+    tags:
+      - name: matchmaker
+  clientMatchCancelled:
+    action: send
+    description: Server notifies client that a match was cancelled (e.g. player failed to connect)
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/MatchCancelledMessage'
+    tags:
+      - name: matchmaker
+  clientUpdateParty:
+    action: send
+    description: Server sends party state update to all party members
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/UpdatePartyMessage'
+    tags:
+      - name: party
+  clientPartyInvite:
+    action: send
+    description: Server sends party invitation to a player
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/PartyInviteMessage'
+    tags:
+      - name: party
+  clientKickedFromParty:
+    action: send
+    description: Server notifies player they were kicked from a party
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/KickedFromPartyMessage'
+    tags:
+      - name: party
+  clientVetoesInfo:
+    action: send
+    description: Server sends current map veto information
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/VetoesInfoMessage'
+    tags:
+      - name: matchmaker
+  clientCoopInfo:
+    action: send
+    description: Server sends cooperative mission information
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/CoopInfoMessage'
+    tags:
+      - name: coop
+  clientAvatarList:
+    action: send
+    description: Server sends list of available avatars for the player
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/AvatarListMessage'
+    tags:
+      - name: social
+  clientModVaultInfo:
+    action: send
+    description: Server sends mod vault information (DEPRECATED - use FAF API)
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/ModVaultInfoMessage'
+    tags:
+      - name: vault
+  clientUpdatedAchievements:
+    action: send
+    description: Server sends updated achievement data
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/UpdatedAchievementsMessage'
+    tags:
+      - name: player
+  clientIrcPassword:
+    action: send
+    description: Server sends IRC password (DEPRECATED - data is meaningless)
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/IrcPasswordMessage'
+    tags:
+      - name: deprecated
+  clientIceServers:
+    action: send
+    description: Server sends ICE server list (DEPRECATED - always empty)
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/IceServersMessage'
+    tags:
+      - name: deprecated
+  clientNotice:
+    action: send
+    description: Server sends a notification or error message
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/NoticeMessage'
+    tags:
+      - name: notification
+  clientInvalid:
+    action: send
+    description: Server sends invalid command response
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/InvalidMessage'
+    tags:
+      - name: notification
+  clientDisabled:
+    action: send
+    description: Server notifies that a command is currently disabled
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/DisabledMessage'
+    tags:
+      - name: notification
+  clientPing:
+    action: send
+    description: Server sends periodic ping to keep connection alive
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/ServerPingMessage'
+    tags:
+      - name: heartbeat
+  clientPong:
+    action: send
+    description: Server responds to client ping
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/ServerPongMessage'
+    tags:
+      - name: heartbeat
+  clientIsReady:
+    action: send
+    description: Server asks client if ready for a tournament or galactic war game
+    channel:
+      $ref: '#/channels/client-inbound'
+    messages:
+      - $ref: '#/channels/client-inbound/messages/IsReadyMessage'
+    tags:
+      - name: matchmaker
+
+  # =====================
+  # Game messages: game client -> server
+  # =====================
+  gameStateReceive:
+    action: receive
+    description: Game reports a state change (Idle, Lobby, Launching, Ended)
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/GameStateCommand'
+    tags:
+      - name: gpgnet
+  gameOptionReceive:
+    action: receive
+    description: Game host sets a game option
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/GameOptionCommand'
+    tags:
+      - name: gpgnet
+  gameModsReceive:
+    action: receive
+    description: Game host reports active game mods
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/GameModsCommand'
+    tags:
+      - name: gpgnet
+  playerOptionReceive:
+    action: receive
+    description: Game host sets a player option
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/PlayerOptionCommand'
+    tags:
+      - name: gpgnet
+  aiOptionReceive:
+    action: receive
+    description: Game host sets an AI option
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/AIOptionCommand'
+    tags:
+      - name: gpgnet
+  clearSlotReceive:
+    action: receive
+    description: Game host clears a game slot
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/ClearSlotCommand'
+    tags:
+      - name: gpgnet
+  gameResultReceive:
+    action: receive
+    description: Game reports a result for an army
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/GameResultCommand'
+    tags:
+      - name: gpgnet
+  operationCompleteReceive:
+    action: receive
+    description: Game reports co-op mission completion
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/OperationCompleteCommand'
+    tags:
+      - name: gpgnet
+  jsonStatsReceive:
+    action: receive
+    description: Game reports army statistics in JSON format
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/JsonStatsCommand'
+    tags:
+      - name: gpgnet
+  enforceRatingReceive:
+    action: receive
+    description: Game reports that rating should be enforced
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/EnforceRatingCommand'
+    tags:
+      - name: gpgnet
+  teamkillReportReceive:
+    action: receive
+    description: Player manually reports a teamkill
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/TeamkillReportCommand'
+    tags:
+      - name: gpgnet
+  teamkillHappenedReceive:
+    action: receive
+    description: Game automatically reports a teamkill event
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/TeamkillHappenedCommand'
+    tags:
+      - name: gpgnet
+  gameIceMsgReceive:
+    action: receive
+    description: Game sends an ICE negotiation message to forward to a peer
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/GameIceMsgCommand'
+    tags:
+      - name: gpgnet
+  desyncReceive:
+    action: receive
+    description: Game reports a desynchronization event
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/DesyncCommand'
+    tags:
+      - name: gpgnet
+  launchStatusReceive:
+    action: receive
+    description: Game reports launch status (e.g. Rejected for mismatched settings)
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/LaunchStatusCommand'
+    tags:
+      - name: gpgnet
+  bottleneckReceive:
+    action: receive
+    description: Game reports a data bottleneck (player falling behind)
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/BottleneckCommand'
+    tags:
+      - name: gpgnet
+  bottleneckClearedReceive:
+    action: receive
+    description: Game reports that a bottleneck has been resolved
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/BottleneckClearedCommand'
+    tags:
+      - name: gpgnet
+  disconnectedReceive:
+    action: receive
+    description: Game reports a player disconnection
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/DisconnectedCommand'
+    tags:
+      - name: gpgnet
+  chatReceive:
+    action: receive
+    description: Game reports a chat message from the game lobby
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/ChatCommand'
+    tags:
+      - name: gpgnet
+  gameFullReceive:
+    action: receive
+    description: Game reports that all game slots are full
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/GameFullCommand'
+    tags:
+      - name: gpgnet
+  gameEndedReceive:
+    action: receive
+    description: Game reports that the simulation has ended
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/GameEndedCommand'
+    tags:
+      - name: gpgnet
+  rehostReceive:
+    action: receive
+    description: Game reports that the user has rehosted the game
+    channel:
+      $ref: '#/channels/game-server-inbound'
+    messages:
+      - $ref: '#/channels/game-server-inbound/messages/RehostCommand'
+    tags:
+      - name: gpgnet
+
+  # =====================
+  # Game messages: server -> game client
+  # =====================
+  gameHostGameSend:
+    action: send
+    description: Server tells game to start hosting and listening for connections
+    channel:
+      $ref: '#/channels/game-client-inbound'
+    messages:
+      - $ref: '#/channels/game-client-inbound/messages/HostGameCommand'
+    tags:
+      - name: gpgnet
+  gameJoinGameSend:
+    action: send
+    description: Server tells game to join the host
+    channel:
+      $ref: '#/channels/game-client-inbound'
+    messages:
+      - $ref: '#/channels/game-client-inbound/messages/JoinGameCommand'
+    tags:
+      - name: gpgnet
+  gameConnectToPeerSend:
+    action: send
+    description: Server tells game to connect to a peer for syncing
+    channel:
+      $ref: '#/channels/game-client-inbound'
+    messages:
+      - $ref: '#/channels/game-client-inbound/messages/ConnectToPeerCommand'
+    tags:
+      - name: gpgnet
+  gameDisconnectFromPeerSend:
+    action: send
+    description: Server tells game to disconnect from a peer
+    channel:
+      $ref: '#/channels/game-client-inbound'
+    messages:
+      - $ref: '#/channels/game-client-inbound/messages/DisconnectFromPeerCommand'
+    tags:
+      - name: gpgnet
+  gameIceMsgSend:
+    action: send
+    description: Server forwards an ICE negotiation message from another peer
+    channel:
+      $ref: '#/channels/game-client-inbound'
+    messages:
+      - $ref: '#/channels/game-client-inbound/messages/ServerIceMsgCommand'
+    tags:
+      - name: gpgnet
+
 components:
   messages:
-    HostGameRequest:
-      name: game_host
-      title: "Request to host a game"
+    # =============================================
+    # Client -> Server lobby messages
+    # =============================================
+    AuthenticateRequest:
+      name: auth
+      title: Authenticate with OAuth token
       payload:
         type: object
         required:
           - command
-          - mapname
-          - title
-          - mod
-          - access
-          - version
+          - token
+          - unique_id
         properties:
           command:
             type: string
-            const: game_host
-          mapname:
+            const: auth
+          token:
             type: string
-          title:
+            description: OAuth bearer token
+          unique_id:
             type: string
-          mod:
-            type: string
-          options:
-            type: string
-            format: binary
-          access:
-            type: string
-            enum:
-              - public
-              - password
-          version:
+            description: Unique hardware identifier hash
+          session:
             type: integer
-          rating_min:
-            type: integer
-          rating_max:
-            type: integer
-          enforce_rating_range:
-            type: boolean
-    JoinGameRequest:
-      name: game_join
-      title: "Request to join a game"
-      payload:
-        type: object
-        required:
-          - command
-          - uid
-        properties:
-          command:
-            type: string
-            const: join_game
-          uid:
-            type: integer
-            minimum: 1
-          password:
-            type: string
+            description: Session ID received from ask_session
+      examples:
+        - summary: Authenticate with token
+          payload:
+            command: auth
+            token: "eyJhbGciOiJSUzI1NiJ9..."
+            unique_id: "7d04beb8-d4b8-40f5-8464-a9efa8546728"
+            session: 812469452
     SessionRequest:
       name: ask_session
-      title: "Request to get a session"
+      title: Request a session ID
       payload:
         type: object
         required:
@@ -345,74 +1003,109 @@ components:
             const: ask_session
           version:
             type: string
+            description: Client version string
           user_agent:
             type: string
-    SocialAddRequest:
-      name: social_add
-      title: "Request to add a friend/foe"
+            description: Client user agent string
+      examples:
+        - summary: Request a session
+          payload:
+            command: ask_session
+            version: "0.11.16"
+            user_agent: "faf-client"
+    HostGameRequest:
+      name: game_host
+      title: Request to host a game
       payload:
         type: object
         required:
           - command
-          - friend
-          - foe
+          - visibility
+          - title
+          - mod
+          - mapname
         properties:
           command:
             type: string
-            const: social_add
-          friend:
-            type: integer
-            minimum: 1
-            description: UserId of the player to add as friend
-          foe:
-            type: integer
-            minimum: 1
-            description: UserId of the player to add as foe
-    SocialRemoveRequest:
-      name: social_remove
-      title: "Request to remove a friend/foe"
-      payload:
-        type: object
-        required:
-          - command
-          - friend
-          - foe
-        properties:
-          command:
-            type: string
-            const: social_remove
-          friend:
-            type: integer
-            minimum: 1
-            description: UserId of the player to remove as friend
-          foe:
-            type: integer
-            minimum: 1
-            description: UserId of the player to remove as foe
-    AvatarRequest:
-      name: avatar
-      title: "Request to list all avatars or select one"
-      payload:
-        type: object
-        required:
-          - command
-          - action
-          - foe
-        properties:
-          command:
-            type: string
-            const: avatar
-          action:
+            const: game_host
+          visibility:
             type: string
             enum:
-              - list_avatar
-              - select
-          avatar:
+              - public
+              - friends
+            description: Game visibility
+          title:
             type: string
-            description: avatar to select (only if action is select)
+            description: Game title (ASCII only, non-empty)
+          mod:
+            type: string
+            description: Featured mod technical name (e.g. "faf", "coop")
+          mapname:
+            type: string
+            description: Map folder name
+          password:
+            type: string
+            description: Game password (if visibility requires it)
+          rating_min:
+            type: number
+            description: Minimum displayed rating for joining
+          rating_max:
+            type: number
+            description: Maximum displayed rating for joining
+          enforce_rating_range:
+            type: boolean
+            description: Whether to enforce the rating range
+          access:
+            type: string
+            enum:
+              - public
+              - password
+            description: Access type sent by some clients alongside visibility. Server ignores this field.
+          options:
+            type: string
+            format: binary
+            description: Options field sent by some clients. Server ignores this field.
+          version:
+            type: integer
+            description: Client version sent by some clients. Server ignores this field.
+      examples:
+        - summary: Host a public custom game
+          payload:
+            command: game_host
+            title: "Test game"
+            visibility: public
+            mod: faf
+            mapname: scmp_007
+            password: null
+    JoinGameRequest:
+      name: game_join
+      title: Request to join a game
+      payload:
+        type: object
+        required:
+          - command
+          - uid
+        properties:
+          command:
+            type: string
+            const: game_join
+          uid:
+            type: integer
+            minimum: 1
+            description: Game ID to join
+          password:
+            type: string
+            description: Game password (if required)
+      examples:
+        - summary: Join a game by ID
+          payload:
+            command: game_join
+            uid: 42
+            password: null
     RestoreGameSessionRequest:
       name: restore_game_session
-      title: "Request to restore game session for a game"
+      title: Request to restore a game session
+      description: Reconnect to an existing game that is still in lobby or live state
       payload:
         type: object
         required:
@@ -425,149 +1118,19 @@ components:
           game_id:
             type: integer
             minimum: 1
-    PingMessage:
-      name: ping
-      title: "Ping"
-      payload:
-        type: object
-        required:
-          - command
-        properties:
-          command:
-            type: string
-            const: ping
-    PongMessage:
-      name: ping
-      title: "Pong"
-      payload:
-        type: object
-        required:
-          - command
-        properties:
-          command:
-            type: string
-            const: pong
-    AdminRequest:
-      name: admin
-      title: "Admin commands"
-      payload:
-        type: object
-        required:
-          - command
-          - action
-        properties:
-          command:
-            type: string
-            const: admin
-          action:
-            type: string
-            enum:
-              - closelobby
-              - closeFA
-              - broadcast
-          user_id:
-            type: integer
-            minimum: 1
-            description: UserId of the player hosting a game or lobby to close
-          message:
-            type: string
-            description: Message to broadcast (only if action is broadcast)
-    InviteToPartyRequest:
-      name: invite_to_party
-      title: "Request to invite a player to a party"
-      payload:
-        type: object
-        required:
-          - command
-          - recipient_id
-        properties:
-          command:
-            type: string
-            const: invite_to_party
-          recipient_id:
-            type: integer
-            minimum: 1
-    AcceptInviteToPartyRequest:
-      name: accept_party_invite
-      title: "Request to accept invite to a party"
-      payload:
-        type: object
-        required:
-          - command
-          - sender_id
-        properties:
-          command:
-            type: string
-            const: accept_party_invite
-          sender_id:
-            type: integer
-            minimum: 1
-    KickPlayerFromPartyRequest:
-      name: kick_player_from_party
-      title: "Request to kick a player from a party"
-      payload:
-        type: object
-        required:
-          - command
-          - kicked_player_id
-        properties:
-          command:
-            type: string
-            const: kick_player_from_party
-          kicked_player_id:
-            type: integer
-            minimum: 1
-    LeavePartyRequest:
-      name: leave_party
-      title: "Request to leave a party"
-      payload:
-        type: object
-        required:
-          - command
-        properties:
-          command:
-            type: string
-            const: leave_party
-    UnreadyPartyRequest:
-      name: unready_party
-      title: "Request to unready a party"
-      payload:
-        type: object
-        required:
-          - command
-        properties:
-          command:
-            type: string
-            const: unready_party
-    SelectPartyFactionsRequest:
-      name: set_party_factions
-      title: "Request to set party factions"
-      payload:
-        type: object
-        required:
-          - command
-          - factions
-        properties:
-          command:
-            type: string
-            const: set_party_factions
-          factions:
-            type: array
-            items:
-              type: string
-              enum:
-                - uef
-                - aeon
-                - cybran
-                - seraphim
+            description: ID of the game to reconnect to
+      examples:
+        - summary: Restore game session
+          payload:
+            command: restore_game_session
+            game_id: 42
     GameMatchmakingRequest:
       name: game_matchmaking
-      title: "Request to join or leave matchmaking queue"
+      title: Request to join or leave a matchmaking queue
       payload:
         type: object
         required:
           - command
-          - queue_name
           - state
         properties:
           command:
@@ -575,14 +1138,63 @@ components:
             const: game_matchmaking
           queue_name:
             type: string
+            description: Technical name of the matchmaker queue
+          mod:
+            type: string
+            deprecated: true
+            description: "DEPRECATED: use queue_name instead"
           state:
             type: string
             enum:
               - start
               - stop
+          faction:
+            type: integer
+            deprecated: true
+            description: "DEPRECATED: use set_party_factions instead. Faction value: 1=UEF, 2=Aeon, 3=Cybran, 4=Seraphim"
+      examples:
+        - summary: Start searching ladder1v1 queue
+          payload:
+            command: game_matchmaking
+            queue_name: ladder1v1
+            state: start
+    IsReadyResponse:
+      name: is_ready_response
+      title: Response to match readiness check
+      payload:
+        type: object
+        required:
+          - command
+          - request_id
+        properties:
+          command:
+            type: string
+            const: is_ready_response
+          request_id:
+            type: string
+      examples:
+        - summary: Respond ready
+          payload:
+            command: is_ready_response
+            request_id: "abc123"
+    MatchmakerInfoRequest:
+      name: matchmaker_info
+      title: Request matchmaker queue information
+      payload:
+        type: object
+        required:
+          - command
+        properties:
+          command:
+            type: string
+            const: matchmaker_info
+      examples:
+        - summary: Request matchmaker info
+          payload:
+            command: matchmaker_info
     SetPlayerVetoesRequest:
       name: set_player_vetoes
-      title: "Request to set player vetoes"
+      title: Request to set map vetoes for matchmaking
       payload:
         type: object
         required:
@@ -606,48 +1218,2332 @@ components:
                 veto_tokens_applied:
                   type: integer
                   minimum: 0
-    MatchmakerInfoRequest:
-      name: matchmaker_info
-      title: Request to receive latest matchmaker info
+                matchmaker_queue_map_pool_id:
+                  type: integer
+                  minimum: 1
+      examples:
+        - summary: Veto a map
+          payload:
+            command: set_player_vetoes
+            vetoes:
+              - map_pool_map_version_id: 15
+                veto_tokens_applied: 1
+    SocialAddRequest:
+      name: social_add
+      title: Request to add a friend or foe
+      description: Exactly one of `friend` or `foe` must be provided.
       payload:
         type: object
         required:
           - command
+        properties:
+          command:
+            type: string
+            const: social_add
+          friend:
+            type: integer
+            minimum: 1
+            description: Player ID to add as friend
+          foe:
+            type: integer
+            minimum: 1
+            description: Player ID to add as foe
+      examples:
+        - summary: Add a friend
+          payload:
+            command: social_add
+            friend: 42
+        - summary: Add a foe
+          payload:
+            command: social_add
+            foe: 99
+    SocialRemoveRequest:
+      name: social_remove
+      title: Request to remove a friend or foe
+      description: Exactly one of `friend` or `foe` must be provided.
+      payload:
+        type: object
+        required:
+          - command
+        properties:
+          command:
+            type: string
+            const: social_remove
+          friend:
+            type: integer
+            minimum: 1
+            description: Player ID to remove as friend
+          foe:
+            type: integer
+            minimum: 1
+            description: Player ID to remove as foe
+      examples:
+        - summary: Remove a friend
+          payload:
+            command: social_remove
+            friend: 42
+    AvatarRequest:
+      name: avatar
+      title: Request to list or select an avatar
+      payload:
+        type: object
+        required:
+          - command
+          - action
+        properties:
+          command:
+            type: string
+            const: avatar
+          action:
+            type: string
+            enum:
+              - list_avatar
+              - select
+          avatar:
+            type: string
+            description: Avatar URL to select (required when action is "select", null to deselect)
+      examples:
+        - summary: List available avatars
+          payload:
+            command: avatar
+            action: list_avatar
+        - summary: Select an avatar
+          payload:
+            command: avatar
+            action: select
+            avatar: "https://content.faforever.com/faf/avatars/UEF.png"
+    AdminRequest:
+      name: admin
+      title: Admin commands
+      description: Requires appropriate server permissions (ADMIN_KICK_SERVER, ADMIN_BROADCAST_MESSAGE, ADMIN_JOIN_CHANNEL)
+      payload:
+        type: object
+        required:
+          - command
+          - action
+        properties:
+          command:
+            type: string
+            const: admin
+          action:
+            type: string
+            enum:
+              - closelobby
+              - closeFA
+              - broadcast
+              - join_channel
+          user_id:
+            type: integer
+            minimum: 1
+            description: Target player ID (for closelobby/closeFA)
+          message:
+            type: string
+            description: Message to broadcast (for broadcast action)
+          user_ids:
+            type: array
+            items:
+              type: integer
+            description: List of player IDs (for join_channel action)
+          channel:
+            type: string
+            description: Channel name to join (for join_channel action)
+      examples:
+        - summary: Kick a player
+          payload:
+            command: admin
+            action: closelobby
+            user_id: 42
+        - summary: Broadcast a message
+          payload:
+            command: admin
+            action: broadcast
+            message: "Server will restart in 5 minutes"
+    InviteToPartyRequest:
+      name: invite_to_party
+      title: Invite a player to your party
+      payload:
+        type: object
+        required:
+          - command
+          - recipient_id
+        properties:
+          command:
+            type: string
+            const: invite_to_party
+          recipient_id:
+            type: integer
+            minimum: 1
+      examples:
+        - summary: Invite player 3 to party
+          payload:
+            command: invite_to_party
+            recipient_id: 3
+    AcceptInviteToPartyRequest:
+      name: accept_party_invite
+      title: Accept a party invitation
+      payload:
+        type: object
+        required:
+          - command
+          - sender_id
+        properties:
+          command:
+            type: string
+            const: accept_party_invite
+          sender_id:
+            type: integer
+            minimum: 1
+      examples:
+        - summary: Accept invite from player 1
+          payload:
+            command: accept_party_invite
+            sender_id: 1
+    KickPlayerFromPartyRequest:
+      name: kick_player_from_party
+      title: Kick a player from your party
+      payload:
+        type: object
+        required:
+          - command
+          - kicked_player_id
+        properties:
+          command:
+            type: string
+            const: kick_player_from_party
+          kicked_player_id:
+            type: integer
+            minimum: 1
+      examples:
+        - summary: Kick player 3 from party
+          payload:
+            command: kick_player_from_party
+            kicked_player_id: 3
+    LeavePartyRequest:
+      name: leave_party
+      title: Leave your current party
+      payload:
+        type: object
+        required:
+          - command
+        properties:
+          command:
+            type: string
+            const: leave_party
+      examples:
+        - summary: Leave current party
+          payload:
+            command: leave_party
+    UnreadyPartyRequest:
+      name: unready_party
+      title: Unready your party
+      payload:
+        type: object
+        required:
+          - command
+        properties:
+          command:
+            type: string
+            const: unready_party
+      examples:
+        - summary: Unready party
+          payload:
+            command: unready_party
+    SelectPartyFactionsRequest:
+      name: set_party_factions
+      title: Set faction preferences for matchmaking
+      payload:
+        type: object
+        required:
+          - command
+          - factions
+        properties:
+          command:
+            type: string
+            const: set_party_factions
+          factions:
+            type: array
+            items:
+              type: string
+              enum:
+                - uef
+                - aeon
+                - cybran
+                - seraphim
+            description: At least one faction must be selected
+      examples:
+        - summary: Set UEF faction preference
+          payload:
+            command: set_party_factions
+            factions:
+              - uef
+    CoopListRequest:
+      name: coop_list
+      title: Request cooperative mission list
+      description: Server responds with one coop_info message per mission
+      payload:
+        type: object
+        required:
+          - command
+        properties:
+          command:
+            type: string
+            const: coop_list
+      examples:
+        - summary: Request co-op mission list
+          payload:
+            command: coop_list
+    ModVaultRequest:
+      name: modvault
+      title: Mod vault operations (DEPRECATED)
+      deprecated: true
+      description: "DEPRECATED: Use the FAF API instead"
+      payload:
+        type: object
+        required:
+          - command
+          - type
+        properties:
+          command:
+            type: string
+            const: modvault
+          type:
+            type: string
+            enum:
+              - start
+              - like
+              - download
+          uid:
+            type: string
+            description: Mod UID (required for like/download)
+      examples:
+        - summary: List mods
+          payload:
+            command: modvault
+            type: start
+        - summary: Like a mod
+          payload:
+            command: modvault
+            type: like
+            uid: "FFF"
+    IceServersRequest:
+      name: ice_servers
+      title: Request ICE servers (DEPRECATED)
+      deprecated: true
+      description: "DEPRECATED: ICE servers are handled outside of the lobby server. Response will always be an empty list."
+      payload:
+        type: object
+        required:
+          - command
+        properties:
+          command:
+            type: string
+            const: ice_servers
+      examples:
+        - summary: Request ICE servers (deprecated)
+          payload:
+            command: ice_servers
+    PingMessage:
+      name: ping
+      title: Ping
+      payload:
+        type: object
+        required:
+          - command
+        properties:
+          command:
+            type: string
+            const: ping
+      examples:
+        - summary: Ping
+          payload:
+            command: ping
+    PongMessage:
+      name: pong
+      title: Pong
+      payload:
+        type: object
+        required:
+          - command
+        properties:
+          command:
+            type: string
+            const: pong
+      examples:
+        - summary: Pong
+          payload:
+            command: pong
+
+    # =============================================
+    # Server -> Client lobby messages
+    # =============================================
+    WelcomeMessage:
+      name: welcome
+      title: Welcome message after successful login
+      description: Sent immediately after successful authentication. Contains the player's own info.
+      payload:
+        type: object
+        required:
+          - command
+          - me
+          - current_time
+          - id
+          - login
+        properties:
+          command:
+            type: string
+            const: welcome
+          me:
+            $ref: '#/components/schemas/PlayerInfo'
+          current_time:
+            type: string
+            format: date-time
+            description: Server current time in ISO 8601 format
+          id:
+            type: integer
+            deprecated: true
+            description: "DEPRECATED: Player ID (use me.id instead)"
+          login:
+            type: string
+            deprecated: true
+            description: "DEPRECATED: Player login (use me.login instead)"
+      examples:
+        - summary: Welcome after login
+          payload:
+            command: welcome
+            me:
+              id: 3
+              login: "Rhiza"
+              clan: "123"
+              country: ""
+              ratings:
+                global:
+                  rating: [1650.0, 62.52]
+                  number_of_games: 2
+                ladder_1v1:
+                  rating: [1650.0, 62.52]
+                  number_of_games: 2
+              global_rating: [1650.0, 62.52]
+              ladder_rating: [1650.0, 62.52]
+              number_of_games: 2
+            current_time: "1970-01-01T00:00:00+00:00"
+            id: 3
+            login: "Rhiza"
+    SessionMessage:
+      name: session
+      title: Session ID response
+      payload:
+        type: object
+        required:
+          - command
+          - session
+        properties:
+          command:
+            type: string
+            const: session
+          session:
+            type: integer
+            description: Session ID to use for authentication
+      examples:
+        - summary: Session response
+          payload:
+            command: session
+            session: 812469452
+    AuthenticationFailedMessage:
+      name: authentication_failed
+      title: Authentication failure
+      payload:
+        type: object
+        required:
+          - command
+          - text
+        properties:
+          command:
+            type: string
+            const: authentication_failed
+          text:
+            type: string
+            description: Error message describing the failure
+      examples:
+        - summary: Login failed
+          payload:
+            command: authentication_failed
+            text: "Login not found or password incorrect. They are case sensitive."
+    PlayerInfoMessage:
+      name: player_info
+      title: Player information update
+      description: |-
+        Sent after login with all online players, and periodically broadcast
+        when player data changes (ratings, avatar, state, etc.)
+      payload:
+        type: object
+        required:
+          - command
+          - players
+        properties:
+          command:
+            type: string
+            const: player_info
+          players:
+            type: array
+            items:
+              $ref: '#/components/schemas/PlayerInfo'
+      examples:
+        - summary: Player info update
+          payload:
+            command: player_info
+            players:
+              - id: 3
+                login: "Rhiza"
+                clan: "123"
+                country: ""
+                ratings:
+                  global:
+                    rating: [1650.0, 62.52]
+                    number_of_games: 2
+                  ladder_1v1:
+                    rating: [1650.0, 62.52]
+                    number_of_games: 2
+                global_rating: [1650.0, 62.52]
+                ladder_rating: [1650.0, 62.52]
+                number_of_games: 2
+    GameInfoMessage:
+      name: game_info
+      title: Game information update
+      description: |-
+        Sent after login with all visible open games, and periodically broadcast
+        when game data changes (players join/leave, state changes, etc.)
+      payload:
+        type: object
+        required:
+          - command
+          - games
+        properties:
+          command:
+            type: string
+            const: game_info
+          games:
+            type: array
+            items:
+              $ref: '#/components/schemas/GameInfo'
+      examples:
+        - summary: Game info broadcast with nested games
+          payload:
+            command: game_info
+            games:
+              - command: game_info
+                visibility: public
+                password_protected: false
+                uid: 42
+                title: "Test Game"
+                state: open
+                game_type: custom
+                featured_mod: faf
+                sim_mods: {}
+                mapname: scmp_007
+                map_file_path: "maps/scmp_007.zip"
+                host: test
+                num_players: 1
+                max_players: 12
+                hosted_at: "2023-01-01T12:00:00+00:00"
+                launched_at: null
+                rating_type: global
+                rating_min: null
+                rating_max: null
+                enforce_rating_range: false
+                teams_ids:
+                  - team_id: 2
+                    player_ids: [1]
+                teams:
+                  "2": ["test"]
+    SocialMessage:
+      name: social
+      title: Social data (friends, foes, channels)
+      description: Sent after login with friend/foe lists and auto-join channels
+      payload:
+        type: object
+        required:
+          - command
+        properties:
+          command:
+            type: string
+            const: social
+          autojoin:
+            type: array
+            items:
+              type: string
+            description: IRC channels to auto-join
+          channels:
+            type: array
+            items:
+              type: string
+            description: IRC channels
+          friends:
+            type: array
+            items:
+              type: integer
+            description: List of friend player IDs
+          foes:
+            type: array
+            items:
+              type: integer
+            description: List of foe player IDs
+          power:
+            type: integer
+            description: Player power level (admin privileges)
+      examples:
+        - summary: Social data after login
+          payload:
+            command: social
+            autojoin:
+              - "#123_clan"
+            channels:
+              - "#123_clan"
+            friends: []
+            foes: [400]
+            power: 2
+    GameLaunchMessage:
+      name: game_launch
+      title: Launch game
+      description: |-
+        Tells the client to launch the game executable. Sent when hosting, joining,
+        or starting a matchmaker game.
+      payload:
+        type: object
+        required:
+          - command
+          - uid
+          - mod
+          - name
+          - init_mode
+          - game_type
+          - rating_type
+        properties:
+          command:
+            type: string
+            const: game_launch
+          uid:
+            type: integer
+            description: Game ID
+          mod:
+            type: string
+            description: Featured mod (e.g. "faf", "coop")
+          name:
+            type: string
+            description: Game name
+          init_mode:
+            type: integer
+            deprecated: true
+            enum:
+              - 0
+              - 1
+            description: "DEPRECATED: 0=normal lobby, 1=auto lobby (infer from game_type)"
+          game_type:
+            type: string
+            enum:
+              - coop
+              - custom
+              - matchmaker
+          rating_type:
+            type: string
+            description: Rating type for this game (e.g. "global", "ladder_1v1")
+          args:
+            type: array
+            description: Additional launch arguments (e.g. ["/numgames", 5])
+          mapname:
+            type: string
+            description: Map folder name (for matchmaker games)
+          team:
+            type: integer
+            description: Team assignment (for matchmaker games)
+          faction:
+            type: integer
+            description: "Faction assignment: 1=UEF, 2=Aeon, 3=Cybran, 4=Seraphim"
+          expected_players:
+            type: integer
+            description: Expected number of players (for matchmaker games)
+          map_position:
+            type: integer
+            description: Start spot on the map (for matchmaker games)
+          game_options:
+            type: object
+            description: Additional game options (for matchmaker games)
+          map_pool_map_version_id:
+            type: integer
+            description: Map pool map version ID (for matchmaker games)
+      examples:
+        - summary: Launch a custom game
+          payload:
+            command: game_launch
+            args: ["/numgames", 5]
+            uid: 42
+            mod: faf
+            name: "Test Game Name"
+            init_mode: 0
+            game_type: custom
+            rating_type: global
+        - summary: Launch a matchmaker game
+          payload:
+            command: game_launch
+            args: ["/numgames", 0]
+            uid: 41956
+            mod: ladder1v1
+            name: "ladder1 Vs ladder2"
+            init_mode: 1
+            game_type: matchmaker
+            rating_type: ladder_1v1
+            team: 2
+            faction: 1
+            expected_players: 2
+            map_position: 1
+            mapname: "scmp_015"
+            map_pool_map_version_id: 1
+    GameJoinFailedMessage:
+      name: game_join_failed
+      title: Game join failed
+      payload:
+        type: object
+        required:
+          - command
+          - reason
+          - uid
+        properties:
+          command:
+            type: string
+            const: game_join_failed
+          reason:
+            type: string
+            enum:
+              - host_left_game
+              - game_not_ready
+              - bad_password
+          uid:
+            type: integer
+            description: Game ID that failed to join
+      examples:
+        - summary: Host left game
+          payload:
+            command: game_join_failed
+            reason: host_left_game
+            uid: 42
+        - summary: Bad password
+          payload:
+            command: game_join_failed
+            reason: bad_password
+            uid: 42
+    MatchmakerInfoMessage:
+      name: matchmaker_info
+      title: Matchmaker queue information
+      description: Sent in response to matchmaker_info request and periodically broadcast
+      payload:
+        type: object
+        required:
+          - command
+          - queues
         properties:
           command:
             type: string
             const: matchmaker_info
-    AuthenticateRequest:
-      name: auth
-      title: "Request to authenticate"
+          queues:
+            type: array
+            items:
+              $ref: '#/components/schemas/QueueInfo'
+      examples:
+        - summary: Matchmaker queue status
+          payload:
+            command: matchmaker_info
+            queues:
+              - queue_name: ladder1v1
+                queue_pop_time: "2023-01-01T12:02:00+00:00"
+                queue_pop_time_delta: 90.5
+                num_players: 12
+                team_size: 1
+                boundary_80s: [[800, 1200]]
+                boundary_75s: [[700, 1300]]
+    SearchInfoMessage:
+      name: search_info
+      title: Matchmaking search status
       payload:
         type: object
         required:
           - command
-          - token
-          - session
-          - unique_id
+          - queue_name
+          - state
         properties:
           command:
             type: string
-            const: auth
-          token:
+            const: search_info
+          queue_name:
             type: string
-          session:
-            type: integer
-          unique_id:
+            description: Queue technical name
+          state:
             type: string
-    IsReadyResponse:
-      name: is_ready_response
-      title: Response to is_ready request
+            enum:
+              - start
+              - stop
+      examples:
+        - summary: Started searching
+          payload:
+            command: search_info
+            queue_name: ladder1v1
+            state: start
+        - summary: Stopped searching
+          payload:
+            command: search_info
+            queue_name: ladder1v1
+            state: stop
+    SearchTimeoutMessage:
+      name: search_timeout
+      title: Matchmaking search timeout
+      description: Sent when players have violations that prevent them from searching
       payload:
         type: object
         required:
           - command
+          - timeouts
+        properties:
+          command:
+            type: string
+            const: search_timeout
+          timeouts:
+            type: array
+            items:
+              type: object
+              required:
+                - player
+                - expires_at
+              properties:
+                player:
+                  type: integer
+                  description: Player ID with a timeout
+                expires_at:
+                  type: string
+                  format: date-time
+                  description: When the timeout expires
+      examples:
+        - summary: Player timed out from searching
+          payload:
+            command: search_timeout
+            timeouts:
+              - player: 123
+                expires_at: "2022-02-05T00:10:00+00:00"
+    SearchViolationMessage:
+      name: search_violation
+      title: Matchmaking violation recorded
+      description: Sent when a player fails to connect to a matchmaker game
+      payload:
+        type: object
+        required:
+          - command
+          - count
+          - time
+        properties:
+          command:
+            type: string
+            const: search_violation
+          count:
+            type: integer
+            description: Number of violations
+          time:
+            type: string
+            format: date-time
+            description: Violation timestamp
+      examples:
+        - summary: First violation
+          payload:
+            command: search_violation
+            count: 1
+            time: "2022-02-05T00:00:00+00:00"
+    MatchFoundMessage:
+      name: match_found
+      title: Match found
+      description: Sent to all players in a match when the matchmaker finds a game
+      payload:
+        type: object
+        required:
+          - command
+          - queue_name
+        properties:
+          command:
+            type: string
+            const: match_found
+          queue_name:
+            type: string
+            description: Queue that found the match
+      examples:
+        - summary: Match found in ladder queue
+          payload:
+            command: match_found
+            queue_name: ladder1v1
+    MatchCancelledMessage:
+      name: match_cancelled
+      title: Match cancelled
+      description: Sent when a matchmaker game fails to start (e.g. player didn't connect in time)
+      payload:
+        type: object
+        required:
+          - command
+        properties:
+          command:
+            type: string
+            const: match_cancelled
+          game_id:
+            type: integer
+            description: ID of the cancelled game (null if game was never created)
+      examples:
+        - summary: Match cancelled
+          payload:
+            command: match_cancelled
+            game_id: 41956
+    UpdatePartyMessage:
+      name: update_party
+      title: Party state update
+      description: Broadcast to all party members when party state changes
+      payload:
+        type: object
+        required:
+          - command
+          - owner
+          - members
+        properties:
+          command:
+            type: string
+            const: update_party
+          owner:
+            type: integer
+            description: Player ID of the party owner
+          members:
+            type: array
+            items:
+              type: object
+              required:
+                - player
+                - factions
+              properties:
+                player:
+                  type: integer
+                  description: Player ID
+                factions:
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - uef
+                      - aeon
+                      - cybran
+                      - seraphim
+                      - nomad
+      examples:
+        - summary: Party with two members
+          payload:
+            command: update_party
+            owner: 1
+            members:
+              - player: 1
+                factions: ["uef"]
+              - player: 3
+                factions: ["uef", "aeon", "cybran", "seraphim"]
+    PartyInviteMessage:
+      name: party_invite
+      title: Party invitation received
+      payload:
+        type: object
+        required:
+          - command
+          - sender
+        properties:
+          command:
+            type: string
+            const: party_invite
+          sender:
+            type: integer
+            description: Player ID of the player who sent the invite
+      examples:
+        - summary: Party invite from player 1
+          payload:
+            command: party_invite
+            sender: 1
+    KickedFromPartyMessage:
+      name: kicked_from_party
+      title: Kicked from party
+      payload:
+        type: object
+        required:
+          - command
+        properties:
+          command:
+            type: string
+            const: kicked_from_party
+      examples:
+        - summary: Kicked from party
+          payload:
+            command: kicked_from_party
+    VetoesInfoMessage:
+      name: vetoes_info
+      title: Map veto information
+      description: Sent when veto state changes or is requested
+      payload:
+        type: object
+        required:
+          - command
+          - forced
+          - vetoes
+        properties:
+          command:
+            type: string
+            const: vetoes_info
+          forced:
+            type: boolean
+            description: Whether the vetoes were forcefully reset
+          vetoes:
+            type: array
+            items:
+              type: object
+              required:
+                - map_pool_map_version_id
+                - veto_tokens_applied
+                - matchmaker_queue_map_pool_id
+              properties:
+                map_pool_map_version_id:
+                  type: integer
+                veto_tokens_applied:
+                  type: integer
+                matchmaker_queue_map_pool_id:
+                  type: integer
+      examples:
+        - summary: Vetoes info
+          payload:
+            command: vetoes_info
+            forced: false
+            vetoes:
+              - map_pool_map_version_id: 15
+                veto_tokens_applied: 1
+                matchmaker_queue_map_pool_id: 3
+    CoopInfoMessage:
+      name: coop_info
+      title: Co-op mission information
+      description: One message per co-op mission, sent in response to coop_list request
+      payload:
+        type: object
+        required:
+          - command
+          - uid
+          - type
+          - name
+          - description
+          - filename
+          - featured_mod
+        properties:
+          command:
+            type: string
+            const: coop_info
+          uid:
+            type: integer
+            description: Mission ID
+          type:
+            type: string
+            enum:
+              - FA Campaign
+              - Aeon Vanilla Campaign
+              - Cybran Vanilla Campaign
+              - UEF Vanilla Campaign
+              - Custom Missions
+          name:
+            type: string
+            description: Mission name
+          description:
+            type: string
+            description: Mission description
+          filename:
+            type: string
+            description: Mission filename
+          featured_mod:
+            type: string
+            const: coop
+      examples:
+        - summary: FA Campaign mission
+          payload:
+            command: coop_info
+            uid: 1
+            type: "FA Campaign"
+            name: "FA Campaign map"
+            description: "A map from the FA campaign"
+            filename: "maps/scmp_coop_123.v0002.zip"
+            featured_mod: coop
+    AvatarListMessage:
+      name: avatar
+      title: Avatar list response
+      description: Sent in response to avatar list_avatar request
+      payload:
+        type: object
+        required:
+          - command
+          - avatarlist
+        properties:
+          command:
+            type: string
+            const: avatar
+          avatarlist:
+            type: array
+            items:
+              type: object
+              required:
+                - url
+                - tooltip
+              properties:
+                url:
+                  type: string
+                  description: Avatar image URL
+                tooltip:
+                  type: string
+                  description: Avatar tooltip text
+      examples:
+        - summary: Avatar list
+          payload:
+            command: avatar
+            avatarlist:
+              - url: "https://content.faforever.com/faf/avatars/UEF.png"
+                tooltip: "UEF"
+              - url: "https://content.faforever.com/faf/avatars/Aeon.png"
+                tooltip: "Aeon"
+    ModVaultInfoMessage:
+      name: modvault_info
+      title: Mod vault information (DEPRECATED)
+      deprecated: true
+      description: "DEPRECATED: Use the FAF API instead"
+      payload:
+        type: object
+        required:
+          - command
+          - uid
+          - name
+          - version
+          - author
+        properties:
+          command:
+            type: string
+            const: modvault_info
+          uid:
+            type: string
+          name:
+            type: string
+          version:
+            type: integer
+          author:
+            type: string
+          description:
+            type: string
+          ui:
+            type: integer
+            description: Whether this is a UI mod
+          thumbnail:
+            type: string
+            description: Thumbnail URL
+          link:
+            type: string
+            description: Download link
+          bugreports:
+            type: array
+            items: {}
+          comments:
+            type: array
+            items: {}
+          played:
+            type: integer
+          likes:
+            type: integer
+          downloads:
+            type: integer
+          date:
+            type: integer
+            description: Unix timestamp
+      examples:
+        - summary: Mod vault entry
+          payload:
+            command: modvault_info
+            uid: "FFF"
+            name: "Mod without icon"
+            version: 1
+            author: "foo"
+            description: "The best version so far"
+            ui: 1
+            thumbnail: ""
+            link: "http://content.faforever.com/faf/vault/noicon.zip"
+            bugreports: []
+            comments: []
+            played: 0
+            likes: 1.0
+            downloads: 0
+    UpdatedAchievementsMessage:
+      name: updated_achievements
+      title: Achievement update
+      payload:
+        type: object
+        required:
+          - command
+          - updated_achievements
+        properties:
+          command:
+            type: string
+            const: updated_achievements
+          updated_achievements:
+            description: List of updated achievement data
+      examples:
+        - summary: Achievement update
+          payload:
+            command: updated_achievements
+            updated_achievements: []
+    IrcPasswordMessage:
+      name: irc_password
+      title: IRC password (DEPRECATED)
+      deprecated: true
+      description: "DEPRECATED: IRC passwords are handled outside of the lobby server. The password field is meaningless."
+      payload:
+        type: object
+        required:
+          - command
+          - password
+        properties:
+          command:
+            type: string
+            const: irc_password
+          password:
+            type: string
+            description: Always "deprecated"
+      examples:
+        - summary: IRC password (always deprecated)
+          payload:
+            command: irc_password
+            password: "deprecated"
+    IceServersMessage:
+      name: ice_servers
+      title: ICE servers response (DEPRECATED)
+      deprecated: true
+      description: "DEPRECATED: ICE servers are handled outside of the lobby server. The list is always empty."
+      payload:
+        type: object
+        required:
+          - command
+          - ice_servers
+        properties:
+          command:
+            type: string
+            const: ice_servers
+          ice_servers:
+            type: array
+            items: {}
+            description: Always an empty array
+      examples:
+        - summary: Empty ICE servers (deprecated)
+          payload:
+            command: ice_servers
+            ice_servers: []
+    NoticeMessage:
+      name: notice
+      title: Notification or error message
+      description: |-
+        Generic notification message. The style field indicates severity:
+        - "info": informational message
+        - "error": error that may cause disconnection
+        - "kick": player is being kicked
+        - "kill": game process should be terminated
+      payload:
+        type: object
+        required:
+          - command
+          - style
+        properties:
+          command:
+            type: string
+            const: notice
+          style:
+            type: string
+            enum:
+              - info
+              - error
+              - kick
+              - kill
+          text:
+            type: string
+            description: Human-readable message (may contain HTML)
+      examples:
+        - summary: Info notice
+          payload:
+            command: notice
+            style: info
+            text: "The host has left the game."
+        - summary: Error notice (ban)
+          payload:
+            command: notice
+            style: error
+            text: "You are banned from FAF forever. <br>Reason: <br>Test permanent ban"
+    InvalidMessage:
+      name: invalid
+      title: Invalid command
+      description: Sent when the server encounters an unhandled exception processing a command
+      payload:
+        type: object
+        required:
+          - command
+        properties:
+          command:
+            type: string
+            const: invalid
+      examples:
+        - summary: Invalid command
+          payload:
+            command: invalid
+    DisabledMessage:
+      name: disabled
+      title: Command is disabled
+      description: Sent when a client sends a command that is currently disabled on the server
+      payload:
+        type: object
+        required:
+          - command
+          - request
+        properties:
+          command:
+            type: string
+            const: disabled
+          request:
+            type: string
+            description: The command that was disabled
+      examples:
+        - summary: Command disabled
+          payload:
+            command: disabled
+            request: game_host
+    IsReadyMessage:
+      name: is_ready
+      title: Readiness check
+      description: |-
+        Server asks the client if it is ready for a tournament or galactic war game.
+        Client should respond with is_ready_response.
+        NOTE: Not currently sent by the server (reserved for future use).
+      payload:
+        type: object
+        required:
+          - command
+          - game_name
+          - featured_mod
+          - response_time_seconds
           - request_id
         properties:
           command:
             type: string
-            const: is_ready_response
+            const: is_ready
+          game_name:
+            type: string
+            description: Name of the game
+          featured_mod:
+            type: string
+            description: Featured mod technical name
+          response_time_seconds:
+            type: integer
+            description: Time in seconds the client has to respond
           request_id:
             type: string
+            description: Request ID to include in the response
+      examples:
+        - summary: Readiness check
+          payload:
+            command: is_ready
+            game_name: "Tournament Match"
+            featured_mod: faf
+            response_time_seconds: 30
+            request_id: "abc123"
+
+    # =============================================
+    # Game messages: game client -> server
+    # =============================================
+    GameStateCommand:
+      name: GameState
+      title: Game state change
+      description: Sent by the game when the state of LobbyComm changes
+      payload:
+        type: object
+        required:
+          - command
+          - target
+          - args
+        properties:
+          command:
+            type: string
+            const: GameState
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            items:
+              type: string
+              enum:
+                - Idle
+                - Lobby
+                - Launching
+                - Ended
+            minItems: 1
+            maxItems: 1
+      examples:
+        - summary: Game enters lobby state
+          payload:
+            command: GameState
+            target: game
+            args: ["Lobby"]
+        - summary: Game launched
+          payload:
+            command: GameState
+            target: game
+            args: ["Launching"]
+    GameOptionCommand:
+      name: GameOption
+      title: Set game option
+      description: Sent by the host to set a game option
+      payload:
+        type: object
+        required:
+          - command
+          - target
+          - args
+        properties:
+          command:
+            type: string
+            const: GameOption
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            description: "[key, value]"
+            minItems: 2
+            maxItems: 2
+      examples:
+        - summary: Set game speed
+          payload:
+            command: GameOption
+            target: game
+            args: ["GameSpeed", "normal"]
+        - summary: Set victory condition
+          payload:
+            command: GameOption
+            target: game
+            args: ["Victory", "demoralization"]
+    GameModsCommand:
+      name: GameMods
+      title: Set active game mods
+      description: Sent by the host to report active mods
+      payload:
+        type: object
+        required:
+          - command
+          - target
+          - args
+        properties:
+          command:
+            type: string
+            const: GameMods
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            description: "[mode, data] where mode is 'activated' (count) or 'uids' (space-separated UIDs)"
+            minItems: 2
+            maxItems: 2
+      examples:
+        - summary: Report activated mods
+          payload:
+            command: GameMods
+            target: game
+            args: ["activated", 0]
+    PlayerOptionCommand:
+      name: PlayerOption
+      title: Set player option
+      description: Sent by the host to set a player option (e.g. Team, Faction, StartSpot)
+      payload:
+        type: object
+        required:
+          - command
+          - target
+          - args
+        properties:
+          command:
+            type: string
+            const: PlayerOption
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            description: "[player_id, key, value]"
+            minItems: 3
+            maxItems: 3
+      examples:
+        - summary: Set player team
+          payload:
+            command: PlayerOption
+            target: game
+            args: [1, "Team", 2]
+        - summary: Set player faction
+          payload:
+            command: PlayerOption
+            target: game
+            args: [1, "Faction", 1]
+    AIOptionCommand:
+      name: AIOption
+      title: Set AI option
+      description: Sent by the host to set an AI player option
+      payload:
+        type: object
+        required:
+          - command
+          - target
+          - args
+        properties:
+          command:
+            type: string
+            const: AIOption
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            description: "[ai_name, key, value]"
+            minItems: 3
+            maxItems: 3
+      examples:
+        - summary: Set AI team
+          payload:
+            command: AIOption
+            target: game
+            args: ["AIx_Easy", "Team", 3]
+    ClearSlotCommand:
+      name: ClearSlot
+      title: Clear game slot
+      description: Sent by the host to clear a game slot
+      payload:
+        type: object
+        required:
+          - command
+          - target
+          - args
+        properties:
+          command:
+            type: string
+            const: ClearSlot
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            description: "[slot_number]"
+            minItems: 1
+            maxItems: 1
+      examples:
+        - summary: Clear slot 3
+          payload:
+            command: ClearSlot
+            target: game
+            args: [3]
+    GameResultCommand:
+      name: GameResult
+      title: Report game result
+      description: |-
+        Reports the result for an army. The result string format is:
+        "[metadata...] result_type score" (space-separated).
+        Result types include: victory, defeat, draw, mutual_draw, etc.
+      payload:
+        type: object
+        required:
+          - command
+          - target
+          - args
+        properties:
+          command:
+            type: string
+            const: GameResult
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            description: "[army_id, result_string]"
+            minItems: 2
+            maxItems: 2
+      examples:
+        - summary: Army victory
+          payload:
+            command: GameResult
+            target: game
+            args: [1, "victory 10"]
+        - summary: Army defeat
+          payload:
+            command: GameResult
+            target: game
+            args: [2, "defeat -10"]
+    OperationCompleteCommand:
+      name: OperationComplete
+      title: Co-op mission completion
+      description: Sent when a co-op mission is completed
+      payload:
+        type: object
+        required:
+          - command
+          - target
+          - args
+        properties:
+          command:
+            type: string
+            const: OperationComplete
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            description: "[primary_complete, secondary_complete, time_delta]"
+            minItems: 3
+            maxItems: 3
+      examples:
+        - summary: Mission complete
+          payload:
+            command: OperationComplete
+            target: game
+            args: [1, 0, 3600.5]
+    JsonStatsCommand:
+      name: JsonStats
+      title: Game statistics
+      description: Game army statistics in JSON format
+      payload:
+        type: object
+        required:
+          - command
+          - target
+          - args
+        properties:
+          command:
+            type: string
+            const: JsonStats
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            description: "[json_stats_string]"
+            minItems: 1
+            maxItems: 1
+      examples:
+        - summary: Game stats
+          payload:
+            command: JsonStats
+            target: game
+            args: ["{\"stats\": []}"]
+    EnforceRatingCommand:
+      name: EnforceRating
+      title: Enforce rating
+      description: Signals that the game's rating should be enforced
+      payload:
+        type: object
+        required:
+          - command
+          - target
+        properties:
+          command:
+            type: string
+            const: EnforceRating
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            items: {}
+      examples:
+        - summary: Enforce rating
+          payload:
+            command: EnforceRating
+            target: game
+            args: []
+    TeamkillReportCommand:
+      name: TeamkillReport
+      title: Manual teamkill report
+      description: Sent when a player clicks the "Report" button after being teamkilled
+      payload:
+        type: object
+        required:
+          - command
+          - target
+          - args
+        properties:
+          command:
+            type: string
+            const: TeamkillReport
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            description: "[gametime, reporter_id, reporter_name, teamkiller_id, teamkiller_name]"
+            minItems: 5
+            maxItems: 5
+      examples:
+        - summary: Teamkill report
+          payload:
+            command: TeamkillReport
+            target: game
+            args: [120, 1, "player1", 2, "player2"]
+    TeamkillHappenedCommand:
+      name: TeamkillHappened
+      title: Automatic teamkill notification
+      description: Sent automatically by the game when a teamkill occurs
+      payload:
+        type: object
+        required:
+          - command
+          - target
+          - args
+        properties:
+          command:
+            type: string
+            const: TeamkillHappened
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            description: "[gametime, victim_id, victim_name, teamkiller_id, teamkiller_name]"
+            minItems: 5
+            maxItems: 5
+      examples:
+        - summary: Teamkill happened
+          payload:
+            command: TeamkillHappened
+            target: game
+            args: [120, 1, "victim", 2, "teamkiller"]
+    GameIceMsgCommand:
+      name: IceMsg
+      title: ICE message (game to server)
+      description: ICE negotiation message to be forwarded to a peer via the server
+      payload:
+        type: object
+        required:
+          - command
+          - target
+          - args
+        properties:
+          command:
+            type: string
+            const: IceMsg
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            description: "[receiver_player_id, ice_message_string]"
+            minItems: 2
+            maxItems: 2
+      examples:
+        - summary: Send ICE message to peer
+          payload:
+            command: IceMsg
+            target: game
+            args: [2, "{\"candidatesGathered\": true}"]
+    DesyncCommand:
+      name: Desync
+      title: Desynchronization
+      description: Sent when a desynchronization is detected in the game
+      payload:
+        type: object
+        required:
+          - command
+          - target
+        properties:
+          command:
+            type: string
+            const: Desync
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            items: {}
+      examples:
+        - summary: Desync detected
+          payload:
+            command: Desync
+            target: game
+            args: []
+    LaunchStatusCommand:
+      name: LaunchStatus
+      title: Launch status
+      description: Reports launch status. "Rejected" indicates a matchmaker game failed due to differing settings.
+      payload:
+        type: object
+        required:
+          - command
+          - target
+          - args
+        properties:
+          command:
+            type: string
+            const: LaunchStatus
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            description: "[status_string]"
+            minItems: 1
+            maxItems: 1
+      examples:
+        - summary: Launch rejected
+          payload:
+            command: LaunchStatus
+            target: game
+            args: ["Rejected"]
+    BottleneckCommand:
+      name: Bottleneck
+      title: Data bottleneck
+      description: Sent when a player is getting behind on data, slowing down the game
+      payload:
+        type: object
+        required:
+          - command
+          - target
+          - args
+        properties:
+          command:
+            type: string
+            const: Bottleneck
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            description: "[code, ...diagnostic_data]"
+      examples:
+        - summary: Bottleneck detected
+          payload:
+            command: Bottleneck
+            target: game
+            args: [1]
+    BottleneckClearedCommand:
+      name: BottleneckCleared
+      title: Bottleneck cleared
+      description: Sent when the game is no longer being slowed down by a data bottleneck
+      payload:
+        type: object
+        required:
+          - command
+          - target
+        properties:
+          command:
+            type: string
+            const: BottleneckCleared
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            items: {}
+      examples:
+        - summary: Bottleneck cleared
+          payload:
+            command: BottleneckCleared
+            target: game
+            args: []
+    DisconnectedCommand:
+      name: Disconnected
+      title: Player disconnected
+      description: Sent when a player disconnects from the game
+      payload:
+        type: object
+        required:
+          - command
+          - target
+        properties:
+          command:
+            type: string
+            const: Disconnected
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            items: {}
+      examples:
+        - summary: Player disconnected
+          payload:
+            command: Disconnected
+            target: game
+            args: []
+    ChatCommand:
+      name: Chat
+      title: In-game chat message
+      description: Sent when a player sends a chat message in the game lobby
+      payload:
+        type: object
+        required:
+          - command
+          - target
+          - args
+        properties:
+          command:
+            type: string
+            const: Chat
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            description: "[message_text]"
+            minItems: 1
+            maxItems: 1
+      examples:
+        - summary: Chat message
+          payload:
+            command: Chat
+            target: game
+            args: ["Hello everyone!"]
+    GameFullCommand:
+      name: GameFull
+      title: Game is full
+      description: Sent when all game slots are occupied
+      payload:
+        type: object
+        required:
+          - command
+          - target
+        properties:
+          command:
+            type: string
+            const: GameFull
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            items: {}
+      examples:
+        - summary: Game is full
+          payload:
+            command: GameFull
+            target: game
+            args: []
+    GameEndedCommand:
+      name: GameEnded
+      title: Simulation ended
+      description: Signals that the game simulation has ended
+      payload:
+        type: object
+        required:
+          - command
+          - target
+        properties:
+          command:
+            type: string
+            const: GameEnded
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            items: {}
+      examples:
+        - summary: Game ended
+          payload:
+            command: GameEnded
+            target: game
+            args: []
+    RehostCommand:
+      name: Rehost
+      title: Game rehosted
+      description: Signals that the user has rehosted the game
+      payload:
+        type: object
+        required:
+          - command
+          - target
+        properties:
+          command:
+            type: string
+            const: Rehost
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            items: {}
+      examples:
+        - summary: Game rehosted
+          payload:
+            command: Rehost
+            target: game
+            args: []
+
+    # =============================================
+    # Game messages: server -> game client
+    # =============================================
+    HostGameCommand:
+      name: HostGame
+      title: Host a game
+      description: Tells the game to start listening for incoming connections as a host
+      payload:
+        type: object
+        required:
+          - command
+          - target
+          - args
+        properties:
+          command:
+            type: string
+            const: HostGame
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            description: "[map_folder_name]"
+            minItems: 1
+            maxItems: 1
+            items:
+              type: string
+      examples:
+        - summary: Host game on map
+          payload:
+            command: HostGame
+            target: game
+            args: ["scmp_007"]
+    JoinGameCommand:
+      name: JoinGame
+      title: Join a game
+      description: Tells the game to connect to the host
+      payload:
+        type: object
+        required:
+          - command
+          - target
+          - args
+        properties:
+          command:
+            type: string
+            const: JoinGame
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            description: "[host_player_name, host_player_id]"
+            minItems: 2
+            maxItems: 2
+      examples:
+        - summary: Join game hosted by test
+          payload:
+            command: JoinGame
+            target: game
+            args: ["test", 1]
+    ConnectToPeerCommand:
+      name: ConnectToPeer
+      title: Connect to a peer
+      description: Tells the game to establish a connection with another player for syncing
+      payload:
+        type: object
+        required:
+          - command
+          - target
+          - args
+        properties:
+          command:
+            type: string
+            const: ConnectToPeer
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            description: "[player_name, player_id, offer]"
+            minItems: 3
+            maxItems: 3
+      examples:
+        - summary: Connect to peer (offer)
+          payload:
+            command: ConnectToPeer
+            target: game
+            args: ["Rhiza", 3, true]
+    DisconnectFromPeerCommand:
+      name: DisconnectFromPeer
+      title: Disconnect from a peer
+      description: Tells the game to disconnect from a specific peer
+      payload:
+        type: object
+        required:
+          - command
+          - target
+          - args
+        properties:
+          command:
+            type: string
+            const: DisconnectFromPeer
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            description: "[player_id]"
+            minItems: 1
+            maxItems: 1
+            items:
+              type: integer
+      examples:
+        - summary: Disconnect from peer
+          payload:
+            command: DisconnectFromPeer
+            target: game
+            args: [3]
+    ServerIceMsgCommand:
+      name: IceMsg
+      title: ICE message (server to game)
+      description: Forwards an ICE negotiation message from another peer
+      payload:
+        type: object
+        required:
+          - command
+          - target
+          - args
+        properties:
+          command:
+            type: string
+            const: IceMsg
+          target:
+            type: string
+            const: game
+          args:
+            type: array
+            description: "[sender_player_id, ice_message_string]"
+            minItems: 2
+            maxItems: 2
+      examples:
+        - summary: ICE message from peer
+          payload:
+            command: IceMsg
+            target: game
+            args: [2, "{\"candidatesGathered\": true}"]
+
+  schemas:
+    PlayerInfo:
+      type: object
+      description: Player information object
+      required:
+        - id
+        - login
+        - ratings
+      properties:
+        id:
+          type: integer
+          description: Player ID
+        login:
+          type: string
+          description: Player username
+        avatar:
+          type: object
+          properties:
+            url:
+              type: string
+            tooltip:
+              type: string
+          description: Currently selected avatar (null if none)
+        country:
+          type: string
+          description: Two-letter country code from GeoIP
+        clan:
+          type: string
+          description: Clan tag (null if not in a clan)
+        state:
+          type: string
+          description: "Player state (null for online, 'offline' for offline)"
+        ratings:
+          type: object
+          description: Map of rating type to rating data
+          additionalProperties:
+            type: object
+            required:
+              - rating
+              - number_of_games
+            properties:
+              rating:
+                type: array
+                items:
+                  type: number
+                minItems: 2
+                maxItems: 2
+                description: "[mean, deviation] - displayed rating is mean - 3 * deviation"
+              number_of_games:
+                type: integer
+                description: Number of games played in this rating type
+        global_rating:
+          type: array
+          items:
+            type: number
+          deprecated: true
+          description: "DEPRECATED: [mean, deviation] - use ratings.global instead"
+        ladder_rating:
+          type: array
+          items:
+            type: number
+          deprecated: true
+          description: "DEPRECATED: [mean, deviation] - use ratings.ladder_1v1 instead"
+        number_of_games:
+          type: integer
+          deprecated: true
+          description: "DEPRECATED: Use ratings instead"
+    GameInfo:
+      type: object
+      description: Game information object
+      required:
+        - command
+        - uid
+        - title
+        - state
+        - game_type
+        - featured_mod
+        - mapname
+        - host
+        - num_players
+        - max_players
+        - rating_type
+      properties:
+        command:
+          type: string
+          const: game_info
+        visibility:
+          type: string
+          enum:
+            - public
+            - friends
+        password_protected:
+          type: boolean
+        uid:
+          type: integer
+          description: Game ID
+        title:
+          type: string
+          description: Game name
+        state:
+          type: string
+          enum:
+            - open
+            - playing
+            - closed
+        game_type:
+          type: string
+          enum:
+            - coop
+            - custom
+            - matchmaker
+        featured_mod:
+          type: string
+          description: Featured mod (e.g. "faf", "coop")
+        sim_mods:
+          type: object
+          additionalProperties:
+            type: string
+          description: Active sim mods (UID -> name)
+        mapname:
+          type: string
+          description: Map folder name
+        map_file_path:
+          type: string
+          deprecated: true
+          description: "DEPRECATED: Map file path"
+        host:
+          type: string
+          description: Host player login
+        num_players:
+          type: integer
+        max_players:
+          type: integer
+        hosted_at:
+          type: string
+          format: date-time
+          description: When the game was hosted
+        launched_at:
+          type: number
+          description: Unix timestamp when the game was launched
+        rating_type:
+          type: string
+        rating_min:
+          type: number
+          description: Minimum displayed rating
+        rating_max:
+          type: number
+          description: Maximum displayed rating
+        enforce_rating_range:
+          type: boolean
+        teams_ids:
+          type: array
+          items:
+            type: object
+            properties:
+              team_id:
+                type: integer
+              player_ids:
+                type: array
+                items:
+                  type: integer
+        teams:
+          type: object
+          description: "Map of team ID -> list of player logins. Client should prefer teams_ids."
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        games:
+          type: array
+          items:
+            $ref: '#/components/schemas/GameInfo'
+          description: |-
+            Nested list of game info objects. When the server broadcasts game updates,
+            the outer message contains a `games` array. Individual GameInfo items may
+            also contain this field when sent as part of the initial game list.
+    QueueInfo:
+      type: object
+      description: Matchmaker queue information
+      required:
+        - queue_name
+        - queue_pop_time
+        - queue_pop_time_delta
+        - num_players
+        - team_size
+      properties:
+        queue_name:
+          type: string
+          description: Queue technical name
+        queue_pop_time:
+          type: string
+          format: date-time
+          description: Next queue pop time
+        queue_pop_time_delta:
+          type: number
+          description: Seconds until next queue pop
+        num_players:
+          type: integer
+          description: Number of players currently in queue
+        boundary_80s:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+            minItems: 2
+            maxItems: 2
+          description: "Rating boundary [min, max] at ~80% quality for each search in queue"
+        boundary_75s:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+            minItems: 2
+            maxItems: 2
+          description: "Rating boundary [min, max] at ~75% quality for each search in queue"
+        team_size:
+          type: integer
+          description: Number of players per team
